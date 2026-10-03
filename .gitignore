@@ -1,0 +1,24 @@
+# SAP-Exporte & Testdaten (enthalten Lieferanten-, Preis- und Bestelldaten)
+*.xlsx
+*.XLSX
+*.xls
+*.XLS
+*.xlsm
+*.csv
+*.ASC
+*.asc
+*.zip
+
+# Screenshots & Bilder
+*.png
+*.jpg
+*.jpeg
+
+# Lokale Sicherungskopien (Versionierung läuft ab jetzt über Git)
+*_backup.html
+
+# Editor / OS
+.claude/
+.vscode/
+Thumbs.db
+desktop.ini

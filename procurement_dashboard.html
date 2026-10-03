@@ -1,0 +1,2518 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cicor – Procurement Dashboard</title>
+
+  <!-- Libraries: xlsx-js-style (Lesen + gestylter Export), Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ─────────────────────────────────────────────
+       DESIGN TOKENS (siehe DESIGN_Procurement_Tools.md)
+    ───────────────────────────────────────────── */
+    :root {
+      --bg-0:          #0f172a;
+      --bg-1:          #1e293b;
+      --card:          rgba(30,41,59,0.7);
+      --input:         #0f172a;
+      --border:        rgba(148,163,184,0.15);
+      --border-input:  rgba(148,163,184,0.3);
+      --border-hover:  rgba(99,102,241,0.5);
+
+      --text:          #e2e8f0;
+      --text-title:    #f8fafc;
+      --text-2:        #94a3b8;
+      --text-3:        #64748b;
+      --text-footer:   #475569;
+
+      --accent:        #6366f1;
+      --accent-2:      #8b5cf6;
+      --accent-bg:     rgba(99,102,241,0.08);
+      --green:         #10b981;
+      --green-bg:      rgba(16,185,129,0.08);
+      --green-bd:      rgba(16,185,129,0.3);
+      --red:           #f87171;
+      --red-mark:      #ef4444;
+      --red-bg:        rgba(248,113,113,0.08);
+      --red-bd:        rgba(248,113,113,0.3);
+      --amber:         #f59e0b;
+      --amber-bg:      rgba(245,158,11,0.08);
+      --amber-bd:      rgba(245,158,11,0.3);
+
+      --radius:        12px;
+      --radius-sm:     8px;
+      --sidebar-w:     290px;
+      --font:          'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--font);
+      background: linear-gradient(135deg, var(--bg-0) 0%, var(--bg-1) 50%, var(--bg-0) 100%);
+      background-attachment: fixed;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    button { font-family: inherit; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Header ── */
+    header {
+      height: 58px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 20px;
+      background: rgba(15,23,42,0.85);
+      border-bottom: 1px solid var(--border);
+      z-index: 20;
+    }
+
+    .btn-icon {
+      width: 34px; height: 34px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius-sm);
+      color: var(--text-2);
+      cursor: pointer; font-size: 15px;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover { border-color: var(--border-hover); color: var(--text); background: var(--accent-bg); }
+
+    .logo-mark {
+      width: 32px; height: 32px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #fff; font-size: 15px;
+    }
+    .header-title { font-size: 1.05rem; font-weight: 700; color: var(--text-title); letter-spacing: -0.02em; white-space: nowrap; }
+    .header-sub   { font-size: 0.75rem; color: var(--text-2); font-style: italic; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+    .pill {
+      font-size: 0.75rem; color: var(--text-2);
+      background: var(--input);
+      border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 99px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;
+    }
+    .pill[hidden] { display: none; }
+    .pill.accent { color: #c7d2fe; border-color: rgba(99,102,241,0.35); }
+
+    .lang-switch { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+    .lang-switch svg { width: 16px; height: 16px; color: var(--text-2); }
+    .lang-switch select {
+      background: var(--input); color: var(--text);
+      border: 1px solid var(--border-input); border-radius: 8px;
+      padding: 0.4rem 0.6rem; font-size: 0.85rem; font-family: inherit; cursor: pointer;
+    }
+    .lang-switch select:focus { outline: none; border-color: rgba(99,102,241,0.6); }
+
+    /* ── Layout ── */
+    .layout { flex: 1; display: flex; min-height: 0; position: relative; }
+
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      overflow-y: auto;
+      padding: 18px 16px 24px;
+      display: flex; flex-direction: column; gap: 20px;
+      background: rgba(15,23,42,0.55);
+      border-right: 1px solid var(--border);
+    }
+    body.sidebar-hidden .sidebar { display: none; }
+
+    .main {
+      flex: 1; min-width: 0; overflow-y: auto;
+      padding: 16px 26px 18px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+
+    .sidebar::-webkit-scrollbar, .main::-webkit-scrollbar, .scroll-list::-webkit-scrollbar, .table-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .sidebar::-webkit-scrollbar-thumb, .main::-webkit-scrollbar-thumb, .scroll-list::-webkit-scrollbar-thumb, .table-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 3px; }
+
+    /* ── Sidebar controls ── */
+    .side-section { display: flex; flex-direction: column; gap: 8px; }
+    .side-label {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--text-2);
+    }
+    .side-hint { font-size: 0.72rem; color: var(--text-3); line-height: 1.45; }
+
+    .link-btn {
+      font-size: 0.72rem; font-weight: 600; text-transform: none; letter-spacing: 0;
+      color: #a5b4fc; background: none; border: none; cursor: pointer;
+      padding: 2px 6px; border-radius: 4px;
+    }
+    .link-btn:hover { background: var(--accent-bg); }
+    .link-btn[hidden] { display: none; }
+
+    .drop-zone {
+      border: 1px dashed var(--border-input);
+      border-radius: var(--radius);
+      padding: 16px 12px; text-align: center; cursor: pointer;
+      background: var(--card); transition: all 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--border-hover); background: var(--accent-bg); }
+    .drop-zone.loaded { border-style: solid; border-color: var(--green-bd); background: var(--green-bg); }
+    .drop-icon  { font-size: 1.3rem; display: block; margin-bottom: 4px; }
+    .drop-title { font-size: 0.85rem; font-weight: 600; color: var(--text); word-break: break-word; }
+    .drop-zone.loaded .drop-title { color: var(--green); }
+    .drop-hint  { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; }
+    #fileInput  { display: none; }
+
+    .input {
+      width: 100%; min-width: 0;
+      background: var(--input);
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius-sm);
+      color: var(--text); font-family: inherit; font-size: 0.82rem;
+      padding: 7px 10px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .input:focus { border-color: var(--accent); }
+    .input::placeholder { color: var(--text-3); }
+    input[type="date"].input { color-scheme: dark; }
+
+    .date-grid { display: flex; flex-direction: column; gap: 6px; }
+    .date-grid label { font-size: 0.75rem; color: var(--text-3); display: grid; grid-template-columns: 28px 1fr; align-items: center; gap: 8px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      font-size: 0.75rem; font-weight: 500;
+      padding: 4px 10px; border-radius: 99px;
+      border: 1px solid var(--border-input);
+      background: transparent; color: var(--text-2);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .chip:hover { border-color: var(--border-hover); color: var(--text); }
+    .chip.active { background: var(--accent-bg); border-color: var(--accent); color: #c7d2fe; }
+
+    .scroll-list { display: flex; flex-direction: column; gap: 1px; max-height: 240px; overflow-y: auto; }
+    .check-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 8px; border-radius: 6px;
+      cursor: pointer; user-select: none; font-size: 0.8rem;
+    }
+    .check-item:hover { background: rgba(148,163,184,0.08); }
+    .check-item input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .check-name  { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .check-count { font-size: 0.72rem; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .check-item.hidden { display: none; }
+
+    .btn-secondary {
+      width: 100%; padding: 8px;
+      background: transparent;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius-sm);
+      color: var(--text-2); font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--border-hover); color: var(--text); background: var(--accent-bg); }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--text-footer);
+      text-align: center;
+    }
+
+    .filter-summary { font-size: 0.75rem; color: var(--text-3); line-height: 1.5; }
+    .filter-summary strong { color: var(--text-2); font-weight: 600; }
+
+    /* ── Empty / Error / Warning ── */
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; text-align: center; padding: 40px 20px;
+    }
+    .empty-icon  { font-size: 2.6rem; opacity: 0.6; }
+    .empty-title { font-size: 1.15rem; font-weight: 600; color: var(--text-2); }
+    .empty-sub   { font-size: 0.85rem; color: var(--text-3); max-width: 460px; line-height: 1.5; }
+
+    .error-box, .warn-box {
+      border-radius: 10px; padding: 1rem;
+      font-size: 0.85rem; line-height: 1.55;
+    }
+    .error-box { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+    .error-box strong { color: #fecaca; }
+    .warn-box  { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3); color: #fcd34d; }
+    .warn-box strong { color: #fde68a; }
+    .error-box[hidden], .warn-box[hidden] { display: none; }
+    .error-box ul, .warn-box ul { margin: 6px 0 0 18px; }
+    .error-box code, .warn-box code { font-family: Consolas, monospace; font-size: 0.8rem; background: rgba(15,23,42,0.6); padding: 1px 5px; border-radius: 4px; }
+
+    .dashboard[hidden], .view[hidden] { display: none; }
+    .dashboard, .view { display: flex; flex-direction: column; gap: 18px; }
+
+    /* ── View tabs ── */
+    .view-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+    .view-tabs::-webkit-scrollbar { display: none; }
+    .view-tab {
+      padding: 9px 16px 10px;
+      background: none; border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-2); font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active { color: var(--text-title); border-bottom-color: var(--accent); }
+
+    /* ── KPI tiles ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .kpi-grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px 13px;
+      display: flex; flex-direction: column; gap: 6px;
+      position: relative; overflow: hidden;
+      text-align: left; color: inherit; font: inherit;
+    }
+    .kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+    .kpi.red::before   { background: var(--red-mark); }
+    .kpi.amber::before { background: var(--amber); }
+    .kpi.green::before { background: var(--green); }
+    .kpi.grey::before  { background: var(--text-3); }
+    button.kpi { cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+    button.kpi:hover { border-color: var(--border-hover); }
+    button.kpi.selected { border-color: var(--accent); background: rgba(99,102,241,0.12); }
+
+    .kpi-label { font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2); }
+    .kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--text-title); letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
+    .kpi-unit  { font-size: 0.85rem; font-weight: 500; color: var(--text-2); margin-left: 4px; }
+    .kpi-sub   { font-size: 0.75rem; color: var(--text-3); }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex; flex-direction: column; gap: 12px;
+      min-width: 0;
+    }
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .card-title  { font-size: 0.95rem; font-weight: 600; color: var(--text-title); }
+    .card-sub    { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; line-height: 1.45; }
+
+    .legend { display: flex; gap: 14px; font-size: 0.75rem; color: var(--text-2); flex-wrap: wrap; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+
+    .chart-box { position: relative; width: 100%; }
+
+    .row-2    { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+    .row-ab   { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; }
+    .row-wide { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 18px; }
+
+    .switch { display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-2); cursor: pointer; user-select: none; }
+    .switch input { width: 16px; height: 16px; accent-color: var(--amber); cursor: pointer; }
+
+    .note { font-size: 0.75rem; color: var(--text-3); line-height: 1.5; }
+    .note strong { color: var(--text-2); font-weight: 600; }
+
+    /* AB-Quote */
+    .ab-hero { display: flex; align-items: baseline; gap: 8px; }
+    .ab-hero .big { font-size: 2.6rem; font-weight: 700; color: var(--text-title); letter-spacing: -0.03em; line-height: 1; }
+    .ab-hero .lbl { font-size: 0.85rem; color: var(--text-2); }
+    .meter { height: 10px; border-radius: 99px; background: var(--red-bg); border: 1px solid var(--red-bd); overflow: hidden; }
+    .meter > div { height: 100%; background: var(--green); border-radius: 99px 0 0 99px; transition: width 0.3s; }
+    .ab-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+    .ab-row { display: grid; grid-template-columns: 14px 1fr auto auto; gap: 8px; align-items: center; font-size: 0.82rem; }
+    .ab-row .name { color: var(--text-2); }
+    .ab-row .num  { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+    .ab-row .val  { color: var(--text-3); font-size: 0.75rem; font-variant-numeric: tabular-nums; text-align: right; min-width: 90px; }
+    .ab-note { font-size: 0.75rem; color: var(--text-3); border-top: 1px solid var(--border); padding-top: 10px; line-height: 1.5; }
+    .ab-note strong { color: var(--red); font-weight: 600; }
+
+    /* ── Tables ── */
+    .table-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .btn-download {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--green);
+      background: var(--green-bg);
+      color: #6ee7b7; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .btn-download:hover { background: rgba(16,185,129,0.18); }
+
+    .table-scroll { overflow: auto; max-height: 560px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    thead th {
+      position: sticky; top: 0; z-index: 1;
+      background: #131c2e; color: var(--text-2);
+      font-weight: 600; text-align: left;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border-input);
+      white-space: nowrap; user-select: none;
+    }
+    thead th.sortable { cursor: pointer; }
+    thead th.sortable:hover { color: var(--text); }
+    thead th.num { text-align: right; }
+    thead th .sort { color: #a5b4fc; margin-left: 3px; font-size: 0.7rem; }
+
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:hover { background: rgba(148,163,184,0.06); }
+    tbody td { padding: 7px 10px; white-space: nowrap; color: var(--text); }
+    td.num   { text-align: right; font-variant-numeric: tabular-nums; }
+    td.muted { color: var(--text-2); }
+    td.trunc { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+    td.wrap  { white-space: normal; min-width: 200px; }
+    td.mono  { font-variant-numeric: tabular-nums; color: var(--text-2); }
+    td.empty { text-align: center; color: var(--text-3); padding: 30px; white-space: normal; }
+    .sub-id  { color: var(--text-3); }
+    .late    { color: var(--red); }
+    .pos     { color: var(--amber); }
+
+    .status {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 9px; border-radius: 99px;
+      font-size: 0.73rem; font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .status.overdue { background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red); }
+    .status.soon    { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
+    .status.ok      { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
+
+    .ab-yes { color: var(--green); font-weight: 600; }
+    .ab-no  { color: var(--red);   font-weight: 600; }
+
+    .share { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+    .share .bar { width: 70px; height: 6px; border-radius: 99px; background: rgba(148,163,184,0.15); overflow: hidden; }
+    .share .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+
+    .table-foot { font-size: 0.75rem; color: var(--text-3); }
+
+    footer { font-size: 0.75rem; color: var(--text-footer); text-align: center; padding: 6px 0 2px; }
+
+    /* ── Loading ── */
+    .loading {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(15,23,42,0.8);
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    }
+    .loading.visible { display: flex; }
+    .spinner { width: 34px; height: 34px; border: 3px solid var(--border-input); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    .loading-text { font-size: 0.85rem; color: var(--text-2); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 1350px) {
+      .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .kpi-grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 1150px) {
+      .row-2, .row-ab, .row-wide { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .sidebar {
+        position: absolute; inset: 0 auto 0 0; z-index: 15;
+        background: #111a2c;
+        box-shadow: 8px 0 24px rgba(0,0,0,0.4);
+      }
+      body:not(.sidebar-open) .sidebar { display: none; }
+      body.sidebar-hidden.sidebar-open .sidebar { display: flex; }
+      .main { padding: 12px 16px 16px; }
+      .header-sub, #filePill { display: none; }
+    }
+    @media (max-width: 600px) {
+      header { gap: 10px; padding: 0 12px; }
+      .logo-mark, #stichtagPill { display: none; }
+      .kpi-grid, .kpi-grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" data-i18n="loading">Daten werden verarbeitet…</div>
+</div>
+
+<!-- ─── HEADER ─── -->
+<header>
+  <button class="btn-icon" id="sidebarToggle" data-i18n-title="hdr.toggle" data-i18n-aria="hdr.toggle">☰</button>
+  <div class="logo-mark">C</div>
+  <div>
+    <div class="header-title">Procurement Dashboard</div>
+    <div class="header-sub" data-i18n="hdr.sub">Cicor Group · Einkauf · offene Bestellungen (ZBK)</div>
+  </div>
+  <div class="header-right">
+    <span class="pill" id="filePill" hidden></span>
+    <span class="pill accent" id="stichtagPill" hidden></span>
+    <div class="lang-switch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <select id="langSelect" data-i18n-aria="hdr.lang">
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ─── SIDEBAR / FILTER ─── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="side-section">
+      <div class="side-label" data-i18n="side.file">Datei</div>
+      <div class="drop-zone" id="dropZone" tabindex="0" role="button" data-i18n-aria="drop.title">
+        <span class="drop-icon" id="dropIcon">📄</span>
+        <div class="drop-title" id="dropTitle" data-i18n="drop.title">ZBK-Liste laden</div>
+        <div class="drop-hint" id="dropHint" data-i18n="drop.hint">Drag &amp; Drop oder klicken (.xlsx)</div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" />
+      </div>
+    </div>
+
+    <div class="side-section">
+      <div class="side-label"><span data-i18n="side.stichtag">Stichtag</span><button class="link-btn" id="stichtagReset" data-i18n="btn.resetShort" hidden>zurücksetzen</button></div>
+      <input class="input" type="date" id="stichtagInput" />
+      <div class="side-hint" id="stichtagHint" data-i18n="stichtag.initial">Wird beim Laden aus dem Dateinamen bestimmt.</div>
+    </div>
+
+    <div class="side-section">
+      <div class="side-label" data-i18n="side.currency">Werte in</div>
+      <div class="chips" id="currencyChips"></div>
+      <div class="side-hint" id="currencyHint"></div>
+    </div>
+
+    <div class="side-section">
+      <div class="side-label" data-i18n="side.search">Suche</div>
+      <input class="input" id="searchInput" type="search" data-i18n-ph="ph.search" />
+    </div>
+
+    <div class="side-section">
+      <div class="side-label" data-i18n="side.delivery">Lieferdatum</div>
+      <div class="chips" id="datePresets">
+        <button class="chip" data-preset="all" data-i18n="preset.all">Alle</button>
+        <button class="chip" data-preset="overdue" data-i18n="preset.overdue">Überfällig</button>
+        <button class="chip" data-preset="30" data-i18n="preset.30">Nächste 30 T.</button>
+        <button class="chip" data-preset="90" data-i18n="preset.90">Nächste 90 T.</button>
+      </div>
+      <div class="date-grid">
+        <label><span data-i18n="lbl.from">Von</span><input class="input" type="date" id="dateFrom" /></label>
+        <label><span data-i18n="lbl.to">Bis</span><input class="input" type="date" id="dateTo" /></label>
+      </div>
+    </div>
+
+    <div class="side-section">
+      <div class="side-label"><span data-i18n="side.dispo">Disponent</span><button class="link-btn" id="dispoToggle"></button></div>
+      <input class="input" id="dispoSearch" type="search" data-i18n-ph="ph.dispo" />
+      <div class="scroll-list" id="dispoList"></div>
+    </div>
+
+    <div class="side-section">
+      <div class="side-label"><span data-i18n="side.meld">Ausnahmemeldung</span><button class="link-btn" id="meldToggle"></button></div>
+      <div class="scroll-list" id="meldList"></div>
+    </div>
+
+    <div class="side-section">
+      <button class="btn-secondary" id="resetBtn" data-i18n="btn.reset">↺ Filter zurücksetzen</button>
+      <div class="filter-summary" id="filterSummary"></div>
+    </div>
+
+    <div class="sidebar-footer">Built by Michael Siegfried</div>
+
+  </aside>
+
+  <!-- ─── MAIN ─── -->
+  <main class="main" id="main">
+
+    <div class="error-box" id="errorBox" hidden></div>
+    <div class="warn-box" id="warnBox" hidden></div>
+
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title" data-i18n="empty.title">Noch keine Daten geladen</div>
+      <div class="empty-sub" data-i18n="empty.sub">ZBK-Export aus SAP (Excel) links in das Feld ziehen oder anklicken.</div>
+    </div>
+
+    <div class="dashboard" id="dashboard" hidden>
+
+      <nav class="view-tabs" id="viewTabs">
+        <button class="view-tab active" data-view="overview" data-i18n="tab.overview">Übersicht</button>
+        <button class="view-tab" data-view="actions" data-i18n="tab.actions">Massnahmen</button>
+        <button class="view-tab" data-view="payments" data-i18n="tab.payments">Zahlungen &amp; Konditionen</button>
+        <button class="view-tab" data-view="material" data-i18n="tab.material">Material &amp; Hersteller</button>
+      </nav>
+
+      <!-- ════════════ ÜBERSICHT ════════════ -->
+      <section class="view" id="view-overview">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-label" data-i18n="kpi.total">Offener Bestellwert</div><div class="kpi-value" id="kpiTotal">—</div><div class="kpi-sub" id="kpiTotalSub">—</div></div>
+          <div class="kpi"><div class="kpi-label" data-i18n="kpi.pos">Bestellpositionen</div><div class="kpi-value" id="kpiPos">—</div><div class="kpi-sub" id="kpiPosSub">—</div></div>
+          <div class="kpi red"><div class="kpi-label" data-i18n="kpi.overdue">Überfällig</div><div class="kpi-value" id="kpiOverdue">—</div><div class="kpi-sub" id="kpiOverdueSub">—</div></div>
+          <div class="kpi amber"><div class="kpi-label" data-i18n="kpi.noab">Ohne Auftragsbestätigung</div><div class="kpi-value" id="kpiNoAB">—</div><div class="kpi-sub" id="kpiNoABSub">—</div></div>
+          <div class="kpi green"><div class="kpi-label" data-i18n="kpi.sup">Lieferanten</div><div class="kpi-value" id="kpiSup">—</div><div class="kpi-sub" data-i18n="kpi.supSub">Kreditoren mit offenen Positionen</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title" data-i18n="month.title">Offener Bestellwert nach Liefermonat</div><div class="card-sub" id="monthSub">—</div></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.overdue">Überfällig</span></span>
+              <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.open">Termin offen</span></span>
+            </div>
+          </div>
+          <div class="chart-box" style="height:260px"><canvas id="monthChart" role="img" data-i18n-aria="month.title"></canvas></div>
+        </div>
+
+        <div class="row-ab">
+          <div class="card">
+            <div><div class="card-title" data-i18n="ab.title">Auftragsbestätigungen</div><div class="card-sub" data-i18n="ab.sub">Anteil Bestellpositionen mit AB</div></div>
+            <div class="ab-hero"><span class="big" id="abPct">—</span><span class="lbl" data-i18n="ab.with">mit AB</span></div>
+            <div class="meter" aria-hidden="true"><div id="abMeter" style="width:0"></div></div>
+            <div class="ab-rows">
+              <div class="ab-row"><i class="swatch" style="background:var(--green)"></i><span class="name" data-i18n="ab.yes">Mit AB</span><span class="num" id="abYes">—</span><span class="val" id="abYesVal">—</span></div>
+              <div class="ab-row"><i class="swatch" style="background:var(--red-mark)"></i><span class="name" data-i18n="ab.no">Ohne AB</span><span class="num" id="abNo">—</span><span class="val" id="abNoVal">—</span></div>
+            </div>
+            <div class="ab-note" id="abNote"></div>
+          </div>
+          <div class="card">
+            <div><div class="card-title" data-i18n="meld.title">SAP-Ausnahmemeldungen</div><div class="card-sub" data-i18n="meld.sub">Offener Wert je Meldung</div></div>
+            <div class="chart-box" style="height:230px"><canvas id="meldChart" role="img" data-i18n-aria="meld.title"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div><div class="card-title" data-i18n="sup.title">Top 10 Lieferanten nach offenem Bestellwert</div><div class="card-sub" id="supSub">—</div></div>
+          <div class="chart-box" style="height:320px"><canvas id="supChart" role="img" data-i18n-aria="sup.title"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title" data-i18n="ampel.title">Lieferungen – Fälligkeits-Ampel</div><div class="card-sub" data-i18n="ampel.sub">Eine Zeile je Einteilung</div></div>
+            <div class="table-tools">
+              <div class="chips" id="statusTabs">
+                <button class="chip active" data-status="all" data-i18n="st.all">Alle</button>
+                <button class="chip" data-status="overdue" data-i18n="st.overdue">Überfällig</button>
+                <button class="chip" data-status="soon" data-i18n="st.soon">≤ 7 Tage</button>
+                <button class="chip" data-status="ok" data-i18n="st.later">Später</button>
+              </div>
+              <button class="btn-download" data-export="ampel" data-i18n="btn.export">⬇ Excel-Export</button>
+            </div>
+          </div>
+          <div class="table-scroll"><table><thead><tr id="ampelHead"></tr></thead><tbody id="ampelBody"></tbody></table></div>
+          <div class="table-foot" id="ampelFoot"></div>
+        </div>
+      </section>
+
+      <!-- ════════════ MASSNAHMEN ════════════ -->
+      <section class="view" id="view-actions" hidden>
+        <div class="kpi-grid four" id="actionTiles"></div>
+
+        <div class="row-wide">
+          <div class="card">
+            <div><div class="card-title" id="actTitle">—</div><div class="card-sub" id="actSub">—</div></div>
+            <div class="chart-box" style="height:300px"><canvas id="actChart" role="img" data-i18n-aria="act.chartAria"></canvas></div>
+          </div>
+          <div class="card">
+            <div><div class="card-title" data-i18n="act.helpTitle">So ist die Liste zu lesen</div></div>
+            <div class="note" id="actHelp"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title" id="actTableTitle">—</div><div class="card-sub" data-i18n="act.tableSub">Eine Zeile je Einteilung</div></div>
+            <div class="table-tools"><button class="btn-download" data-export="actions" data-i18n="btn.export">⬇ Excel-Export</button></div>
+          </div>
+          <div class="table-scroll"><table><thead><tr id="actionsHead"></tr></thead><tbody id="actionsBody"></tbody></table></div>
+          <div class="table-foot" id="actionsFoot"></div>
+        </div>
+      </section>
+
+      <!-- ════════════ ZAHLUNGEN & KONDITIONEN ════════════ -->
+      <section class="view" id="view-payments" hidden>
+        <div class="kpi-grid">
+          <div class="kpi red"><div class="kpi-label" data-i18n="pay.k1">Fällig ≤ 30 Tage</div><div class="kpi-value" id="payK1">—</div><div class="kpi-sub" id="payK1Sub">—</div></div>
+          <div class="kpi amber"><div class="kpi-label" data-i18n="pay.k2">Fällig 31–90 Tage</div><div class="kpi-value" id="payK2">—</div><div class="kpi-sub" id="payK2Sub">—</div></div>
+          <div class="kpi"><div class="kpi-label" data-i18n="pay.k3">Fällig &gt; 90 Tage</div><div class="kpi-value" id="payK3">—</div><div class="kpi-sub" id="payK3Sub">—</div></div>
+          <div class="kpi green"><div class="kpi-label" data-i18n="pay.k4">Skontopotenzial</div><div class="kpi-value" id="payK4">—</div><div class="kpi-sub" id="payK4Sub">—</div></div>
+          <div class="kpi grey"><div class="kpi-label" data-i18n="pay.k5">Ø Zahlungsziel</div><div class="kpi-value" id="payK5">—</div><div class="kpi-sub" data-i18n="pay.k5sub">wertgewichtet, netto</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title" data-i18n="pay.title">Zahlungsausgänge nach Fälligkeitsmonat</div>
+              <div class="card-sub" id="paySub">—</div>
+            </div>
+            <div class="table-tools">
+              <label class="switch" data-i18n-title="pay.skontoTip"><input type="checkbox" id="skontoToggle" /> <span data-i18n="pay.skonto">Skonto ziehen</span></label>
+              <div class="legend">
+                <span><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.payLate">aus überfälligen Lieferungen</span></span>
+                <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.payOn">aus termingerechten Lieferungen</span></span>
+              </div>
+            </div>
+          </div>
+          <div class="chart-box" style="height:260px"><canvas id="payChart" role="img" data-i18n-aria="pay.title"></canvas></div>
+          <div class="note" data-i18n-html="pay.note"></div>
+        </div>
+
+        <div class="row-wide">
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title" data-i18n="terms.title">Offener Wert je Zahlungsbedingung</div><div class="card-sub" data-i18n="terms.sub">—</div></div>
+              <div class="table-tools"><button class="btn-download" data-export="terms" data-i18n="btn.export">⬇ Excel-Export</button></div>
+            </div>
+            <div class="table-scroll" style="max-height:440px"><table><thead><tr id="termsHead"></tr></thead><tbody id="termsBody"></tbody></table></div>
+            <div class="table-foot" id="termsFoot"></div>
+          </div>
+          <div class="card">
+            <div><div class="card-title" data-i18n="inco.title">Offener Wert je Incoterm</div><div class="card-sub" data-i18n="inco.sub">Nur Lieferbedingung, ohne Ort</div></div>
+            <div class="chart-box" style="height:360px"><canvas id="incoChart" role="img" data-i18n-aria="inco.title"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════ MATERIAL & HERSTELLER ════════════ -->
+      <section class="view" id="view-material" hidden>
+        <div class="row-2">
+          <div class="card">
+            <div><div class="card-title" data-i18n="mfr.title">Top 10 Hersteller nach offenem Bestellwert</div><div class="card-sub" id="mfrSub">—</div></div>
+            <div class="chart-box" style="height:320px"><canvas id="mfrChart" role="img" data-i18n-aria="mfr.title"></canvas></div>
+          </div>
+          <div class="card">
+            <div><div class="card-title" data-i18n="mat.title">Top 10 Materialien nach offenem Bestellwert</div><div class="card-sub" id="matSub">—</div></div>
+            <div class="chart-box" style="height:320px"><canvas id="matChart" role="img" data-i18n-aria="mat.title"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title" data-i18n="matTable.title">Material konsolidiert</div><div class="card-sub" data-i18n="matTable.sub">—</div></div>
+            <div class="table-tools"><button class="btn-download" data-export="material" data-i18n="btn.export">⬇ Excel-Export</button></div>
+          </div>
+          <div class="table-scroll"><table><thead><tr id="materialHead"></tr></thead><tbody id="materialBody"></tbody></table></div>
+          <div class="table-foot" id="materialFoot"></div>
+        </div>
+      </section>
+
+    </div>
+
+    <footer data-i18n="footer">Cicor Procurement Tools · Daten werden ausschliesslich lokal im Browser verarbeitet</footer>
+  </main>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   ÜBERSETZUNGEN
+═══════════════════════════════════════════════════ */
+const LANG_KEY = 'cicor.procurementDashboard.lang';
+const LOCALE   = { de: 'de-CH', en: 'en-GB' };
+let lang = 'de';
+
+const I18N = {
+  de: {
+    'loading': 'Daten werden verarbeitet…',
+    'hdr.toggle': 'Filter ein-/ausblenden',
+    'hdr.sub': 'Cicor Group · Einkauf · offene Bestellungen (ZBK)',
+    'hdr.lang': 'Sprache',
+    'side.file': 'Datei', 'drop.title': 'ZBK-Liste laden', 'drop.hint': 'Drag & Drop oder klicken (.xlsx)',
+    'drop.loadedHint': '{n} Zeilen · klicken zum Wechseln',
+    'side.stichtag': 'Stichtag', 'btn.resetShort': 'zurücksetzen',
+    'stichtag.initial': 'Wird beim Laden aus dem Dateinamen bestimmt.',
+    'stichtag.fromFile': 'Aus Dateiname: Export-Zeitstempel {ts}.',
+    'stichtag.today': 'Kein Zeitstempel im Dateinamen – aktuelles Datum verwendet.',
+    'stichtag.manual': 'Manuell gesetzt.',
+    'stichtag.pill': 'Stichtag {d}', 'stichtag.pillManual': 'Stichtag {d} (manuell)', 'stichtag.pillToday': 'Stichtag {d} (heute)',
+    'side.currency': 'Werte in', 'cur.hw': '{c} · Hauswährung',
+    'cur.hwHint': 'Alle Bestellungen, Werte in {c} (Kaufbetrag in HW).',
+    'cur.origHint': 'Nur Bestellungen in {c}, Werte in Originalwährung (Nettowert offen).',
+    'cur.chipTip': '{n} Einteilungen in {c}',
+    'side.search': 'Suche', 'ph.search': 'Lieferant, Material, Hersteller, MPN…',
+    'side.delivery': 'Lieferdatum', 'preset.all': 'Alle', 'preset.overdue': 'Überfällig', 'preset.30': 'Nächste 30 T.', 'preset.90': 'Nächste 90 T.',
+    'lbl.from': 'Von', 'lbl.to': 'Bis',
+    'side.dispo': 'Disponent', 'ph.dispo': 'Disponent suchen…', 'side.meld': 'Ausnahmemeldung',
+    'btn.allOff': 'Alle ab', 'btn.allOn': 'Alle an', 'btn.reset': '↺ Filter zurücksetzen', 'btn.export': '⬇ Excel-Export',
+    'sum.rows': '<strong>{n}</strong> von {t} Einteilungen', 'sum.cur': 'nur {c}-Bestellungen',
+    'sum.dispo': '{a}/{b} Disponenten', 'sum.meld': '{a}/{b} Meldungen', 'sum.search': 'Suche „{q}“',
+    'empty.title': 'Noch keine Daten geladen',
+    'empty.sub': 'ZBK-Export aus SAP (Excel, Deutsch oder Englisch) links in das Feld ziehen oder anklicken. Die Datei wird nur lokal im Browser verarbeitet.',
+    'footer': 'Cicor Procurement Tools · Daten werden ausschliesslich lokal im Browser verarbeitet',
+
+    'err.type': 'Falscher Dateityp', 'err.typeMsg': '<strong>{f}</strong> ist keine Excel-Datei. Bitte den ZBK-Export als .xlsx laden.',
+    'err.read': 'Datei konnte nicht gelesen werden', 'err.readMsg': 'Lesefehler im Browser.',
+    'err.emptySheet': 'Das erste Tabellenblatt enthält keine Daten.',
+    'err.noRows': 'Keine Zeilen mit Einkaufsbeleg gefunden.',
+    'err.missing': 'Import abgebrochen – Pflichtspalten fehlen',
+    'err.missingMsg': 'In <strong>{f}</strong> fehlen folgende Spalten, ohne die das Dashboard nicht rechnen kann:',
+    'err.missingHint': 'Bitte den ZBK-Export mit diesen Spalten erneut erzeugen. Die Reihenfolge der Spalten und die Sprache (DE/EN) spielen keine Rolle.',
+    'err.noHeader': 'In den ersten 10 Zeilen wurde keine Kopfzeile mit „Einkaufsbeleg“ bzw. „Purchasing Document“ gefunden.',
+    'err.lib': 'Bibliotheken konnten nicht geladen werden',
+    'err.libMsg': 'Das Dashboard benötigt eine Internetverbindung für xlsx-js-style und Chart.js (CDN). Bitte Verbindung prüfen und die Seite neu laden.',
+    'warn.optional': 'Einige Spalten fehlen – betroffene Auswertungen sind eingeschränkt:',
+    'warn.feature': '{cols} → {feat}',
+
+    'feat.meld': 'Massnahmen & Ausnahmemeldungen', 'feat.pay': 'Zahlungsprognose & Konditionen', 'feat.orig': 'Werte in Originalwährung',
+    'feat.mfr': 'Hersteller-Auswertung', 'feat.ab': 'Auftragsbestätigungen', 'feat.dispo': 'Disponenten-Filter',
+    'feat.resched': 'Neuer Termin / Δ Tage', 'feat.excess': 'Überdeckung bei Storno', 'feat.inco': 'Incoterms', 'feat.qty': 'Offene Menge',
+    'feat.supplier': 'Lieferanten-Auswertung', 'feat.material': 'Material-Auswertung',
+
+    'tab.overview': 'Übersicht', 'tab.actions': 'Massnahmen', 'tab.payments': 'Zahlungen & Konditionen', 'tab.material': 'Material & Hersteller',
+
+    'kpi.total': 'Offener Bestellwert', 'kpi.pos': 'Bestellpositionen', 'kpi.overdue': 'Überfällig',
+    'kpi.noab': 'Ohne Auftragsbestätigung', 'kpi.sup': 'Lieferanten', 'kpi.supSub': 'Kreditoren mit offenen Positionen',
+    'kpi.rowsSub': '{n} Einteilungen', 'kpi.posSub': 'aus {n} Bestellungen',
+    'kpi.overdueSub': '{n} Positionen · {p} des Werts', 'kpi.noabSub': '{p} der Positionen',
+
+    'month.title': 'Offener Bestellwert nach Liefermonat', 'month.sub': '{v} · Summe je Liefermonat{later}',
+    'later': 'Später', 'laterNote': ' · „Später“ = ab {m}', 'earlier': 'Früher', 'earlierNote': ' · „Früher“ = vor {m}', 'noData': 'Keine Daten im Filter',
+    'leg.overdue': 'Überfällig', 'leg.open': 'Termin offen', 'total': 'Total',
+
+    'ab.title': 'Auftragsbestätigungen', 'ab.sub': 'Anteil Bestellpositionen mit AB', 'ab.with': 'mit AB', 'ab.yes': 'Mit AB', 'ab.no': 'Ohne AB',
+    'ab.note': '<strong>{n} Positionen</strong> ohne AB sind überfällig oder in den 14 Tagen nach Stichtag fällig.',
+    'ab.noteNone': 'Keine überfälligen oder in 14 Tagen fälligen Positionen ohne AB.',
+
+    'meld.title': 'SAP-Ausnahmemeldungen', 'meld.sub': 'Offener Wert je Meldung · Balken anklicken filtert · Details im Reiter „Massnahmen“',
+    'meld.none': 'Keine Meldung',
+    'sup.title': 'Top 10 Lieferanten nach offenem Bestellwert',
+    'sup.sub': 'Top 10 = {p} des offenen Werts · Balken anklicken übernimmt den Lieferanten in die Suche',
+    'tip.rows': '{n} Einteilungen', 'tip.share': '{p} · {n} Positionen',
+
+    'ampel.title': 'Lieferungen – Fälligkeits-Ampel', 'ampel.sub': 'Eine Zeile je Einteilung · Status relativ zum Stichtag · Spaltenkopf sortiert',
+    'st.all': 'Alle', 'st.overdue': 'Überfällig', 'st.soon': '≤ 7 Tage', 'st.later': 'Später',
+    'status.overdue': 'Überfällig', 'status.soon': '≤ 7 Tage', 'status.ok': 'Planmässig',
+
+    'act.helpTitle': 'So ist die Liste zu lesen', 'act.chartAria': 'Wert je Lieferant für die gewählte Massnahme',
+    'act.tableSub': 'Eine Zeile je Einteilung · Disponent über die Sidebar wählbar · Spaltenkopf sortiert',
+    'act.chartTitle': '{a}: Top 10 Lieferanten', 'act.tableTitle': '{a} – Arbeitsliste',
+    'act.sub': '{v} bei {n} Lieferanten · Balken anklicken übernimmt den Lieferanten in die Suche',
+    'act.noneFilter': 'Keine Einteilungen im aktuellen Filter (Sidebar prüfen).', 'act.noneFile': 'Diese Meldung kommt in der Datei nicht vor.',
+    'act.tilePos': '{n} Positionen', 'act.tileMedian': ' · Median {d} Tage', 'act.tileExcess': ' · {n} mit Überdeckung',
+    'act.empty': 'Keine Einteilungen mit dieser Meldung im aktuellen Filter.',
+    'act.10.help': 'SAP sieht den Bedarf <strong>früher</strong> als den bestätigten Liefertermin. „Neuer Termin“ ist das von SAP vorgeschlagene Datum, „Δ Tage“ wie viele Tage früher geliefert werden müsste. Kandidaten für eine Expedite-Anfrage beim Lieferanten – sortiert nach Δ Tage stehen die dringendsten oben.',
+    'act.15.help': 'Der Bedarf liegt <strong>später</strong> als der Liefertermin. Ein Verschieben entlastet Bestand und Liquidität. „Δ Tage“ = um wie viele Tage nach hinten. Kleine Verschiebungen (z. B. < 14 Tage) lohnen den Aufwand oft nicht – nach Δ Tage und Wert sortieren.',
+    'act.20.help': 'Für diese Einteilungen besteht <strong>kein Bedarf</strong> mehr. „Überdeckung“ zeigt den Wert des Bestands über Bedarf (GWert excess, Hauswährung) – hohe Werte sind starke Storno-Argumente. Vor dem Storno Rahmenverträge und Stornokosten prüfen.',
+    'act.07.help': 'Der Liefertermin liegt in der <strong>Vergangenheit</strong>, die Ware ist aber noch nicht eingegangen. Liefertermin beim Lieferanten nachfragen und in SAP aktualisieren, damit die Disposition korrekt rechnet.',
+
+    'pay.k1': 'Fällig ≤ 30 Tage', 'pay.k2': 'Fällig 31–90 Tage', 'pay.k3': 'Fällig > 90 Tage', 'pay.k4': 'Skontopotenzial', 'pay.k5': 'Ø Zahlungsziel',
+    'pay.k5sub': 'wertgewichtet, netto', 'pay.days': 'Tage',
+    'pay.kSub': '{n} Einteilungen', 'pay.kSubLate': ' · {v} aus überf. Lief.',
+    'pay.k4Sub': '{n} Einteilungen mit Skonto · {p} des Werts',
+    'pay.title': 'Zahlungsausgänge nach Fälligkeitsmonat', 'pay.skonto': 'Skonto ziehen', 'pay.skontoTip': 'Zahlung zum Skontotermin mit Abzug statt netto',
+    'pay.sub': '{v} {mode}{later}', 'pay.net': 'netto', 'pay.withSkonto': 'mit Skontoabzug', 'pay.prepay': ' · davon Vorauszahlung {v}',
+    'leg.payLate': 'aus überfälligen Lieferungen', 'leg.payOn': 'aus termingerechten Lieferungen',
+    'pay.note': '<strong>Annahmen:</strong> Rechnung am Liefertag (Basisdatum = Lieferdatum). Bei Bedingungen mit „B-Datum am 30. des Monats“ zählt das Monatsende. Ist die Lieferung bereits überfällig, wird Lieferung am Stichtag angenommen. Vorauszahlungen sind mit dem Stichtag eingerechnet, können aber schon bezahlt sein.',
+    'terms.title': 'Offener Wert je Zahlungsbedingung', 'terms.sub': 'Erläuterung gemäss SAP-Konditionentabelle · Tage und Skonto aus der ZBK',
+    'terms.notInTable': 'nicht in Konditionentabelle', 'terms.prepay': 'Vorkasse', 'terms.daysShort': '{d} T.',
+    'basis.prepay': 'Vorauszahlung', 'basis.p29': '29. in 2 Mon.', 'basis.eom': 'Monatsende', 'basis.delivery': 'Lieferdatum',
+    'terms.foot': '{n} Zahlungsbedingungen · Summe {v}',
+    'inco.title': 'Offener Wert je Incoterm', 'inco.sub': 'Nur Lieferbedingung, ohne Ort', 'inco.noText': 'ohne Erläuterung',
+
+    'mfr.title': 'Top 10 Hersteller nach offenem Bestellwert', 'mat.title': 'Top 10 Materialien nach offenem Bestellwert',
+    'mfr.sub': '{n} Hersteller · Top 10 = {p} des Werts{none} · Klick = Suche', 'mfr.noneVal': ' · ohne Hersteller: {v}', 'mfr.empty': 'Keine Herstellerangaben im Filter',
+    'mat.sub': '{n} Materialien · Top 10 = {p} des Werts · Klick = Suche', 'mat.noMfr': 'Hersteller unbekannt',
+    'matTable.title': 'Material konsolidiert', 'matTable.sub': 'Eine Zeile je Material über alle offenen Einteilungen · Spaltenkopf sortiert',
+    'mat.nSuppliers': '{n} Lieferanten', 'mat.foot': '{n} Materialien · Summe {v}',
+
+    'tbl.more': '{a} von {b} Zeilen angezeigt – der Excel-Export enthält alle. ', 'tbl.rows': '{n} Zeilen', 'tbl.rowsSum': '{n} Zeilen · Summe {v}',
+    'tbl.empty': 'Keine Einträge für diese Auswahl.', 'tbl.emptyRows': 'Keine Einteilungen für diese Auswahl.',
+    'ab.missing': '✗ fehlt',
+
+    'col.status': 'Status', 'col.delivery': 'Lieferdatum', 'col.deliveryDate': 'Liefertermin', 'col.order': 'Bestellung',
+    'col.beleg': 'Einkaufsbeleg', 'col.pos': 'Position', 'col.eint': 'Einteilung',
+    'col.supplier': 'Lieferant', 'col.material': 'Material', 'col.text': 'Kurztext', 'col.dispo': 'Disponent',
+    'col.ab': 'AB', 'col.abLong': 'Auftragsbestätigung', 'col.meld': 'Ausnahmemeldung',
+    'col.amount': 'Betrag {c}', 'col.value': 'Wert {c}',
+    'col.newDate': 'Neuer Termin (SAP)', 'col.newDateTip': 'Umterminierungsdatum', 'col.diff': 'Δ Tage', 'col.diffTip': 'Neuer Termin minus Liefertermin', 'col.diffLong': 'Differenz Tage',
+    'col.since': 'Tage überfällig', 'col.qty': 'Offene Menge', 'col.unit': 'ME',
+    'col.excess': 'Überdeckung {c}', 'col.excessTip': 'GWert excess – Wert des Bestands über Bedarf (Hauswährung)',
+    'col.zbed': 'ZBed', 'col.zbedLong': 'Zahlungsbedingung', 'col.termText': 'Erläuterung', 'col.net': 'Netto', 'col.netLong': 'Netto Tage',
+    'col.skonto': 'Skonto', 'col.basis': 'Basisdatum', 'col.positions': 'Positionen', 'col.share': 'Anteil',
+    'col.mfr': 'Hersteller', 'col.mpn': 'Herstellerteilenr.', 'col.suppliers': 'Lieferanten', 'col.abc': 'ABC',
+    'col.next': 'Nächster Termin', 'col.overdueVal': 'davon überfällig {c}',
+
+    'file.ampel': 'Procurement_Lieferungen', 'sheet.ampel': 'Lieferungen',
+    'file.actions': 'Procurement_Massnahmen', 'sheet.actions': 'Massnahmen',
+    'file.terms': 'Procurement_Zahlungsbedingungen', 'sheet.terms': 'Zahlungsbedingungen',
+    'file.material': 'Procurement_Material', 'sheet.material': 'Material',
+    'file.stichtag': 'Stichtag',
+
+    'unit.mio': ' Mio.', 'unit.tsd': ' Tsd.',
+  },
+
+  en: {
+    'loading': 'Processing data…',
+    'hdr.toggle': 'Show/hide filters',
+    'hdr.sub': 'Cicor Group · Procurement · open purchase orders (ZBK)',
+    'hdr.lang': 'Language',
+    'side.file': 'File', 'drop.title': 'Load ZBK list', 'drop.hint': 'Drag & drop or click (.xlsx)',
+    'drop.loadedHint': '{n} rows · click to change',
+    'side.stichtag': 'Reference date', 'btn.resetShort': 'reset',
+    'stichtag.initial': 'Taken from the file name when loading.',
+    'stichtag.fromFile': 'From file name: export timestamp {ts}.',
+    'stichtag.today': 'No timestamp in file name – today’s date used.',
+    'stichtag.manual': 'Set manually.',
+    'stichtag.pill': 'Reference date {d}', 'stichtag.pillManual': 'Reference date {d} (manual)', 'stichtag.pillToday': 'Reference date {d} (today)',
+    'side.currency': 'Values in', 'cur.hw': '{c} · local currency',
+    'cur.hwHint': 'All purchase orders, values in {c} (purchase amount LC).',
+    'cur.origHint': 'Only purchase orders in {c}, values in order currency (net value open).',
+    'cur.chipTip': '{n} schedule lines in {c}',
+    'side.search': 'Search', 'ph.search': 'Supplier, material, manufacturer, MPN…',
+    'side.delivery': 'Delivery date', 'preset.all': 'All', 'preset.overdue': 'Overdue', 'preset.30': 'Next 30 d', 'preset.90': 'Next 90 d',
+    'lbl.from': 'From', 'lbl.to': 'To',
+    'side.dispo': 'MRP controller', 'ph.dispo': 'Search MRP controller…', 'side.meld': 'Exception message',
+    'btn.allOff': 'Clear all', 'btn.allOn': 'Select all','btn.reset': '↺ Reset filters', 'btn.export': '⬇ Excel export',
+    'sum.rows': '<strong>{n}</strong> of {t} schedule lines', 'sum.cur': 'only {c} orders',
+    'sum.dispo': '{a}/{b} MRP controllers', 'sum.meld': '{a}/{b} messages', 'sum.search': 'search “{q}”',
+    'empty.title': 'No data loaded yet',
+    'empty.sub': 'Drag the ZBK export from SAP (Excel, German or English) onto the field on the left or click it. The file is processed locally in your browser only.',
+    'footer': 'Cicor Procurement Tools · Data is processed locally in your browser only',
+
+    'err.type': 'Wrong file type', 'err.typeMsg': '<strong>{f}</strong> is not an Excel file. Please load the ZBK export as .xlsx.',
+    'err.read': 'File could not be read', 'err.readMsg': 'Browser read error.',
+    'err.emptySheet': 'The first worksheet contains no data.',
+    'err.noRows': 'No rows with a purchasing document found.',
+    'err.missing': 'Import aborted – required columns missing',
+    'err.missingMsg': 'The following columns are missing in <strong>{f}</strong>; the dashboard cannot calculate without them:',
+    'err.missingHint': 'Please re-create the ZBK export including these columns. Column order and language (DE/EN) do not matter.',
+    'err.noHeader': 'No header row with “Purchasing Document” or “Einkaufsbeleg” found in the first 10 rows.',
+    'err.lib': 'Libraries could not be loaded',
+    'err.libMsg': 'The dashboard needs an internet connection for xlsx-js-style and Chart.js (CDN). Please check your connection and reload the page.',
+    'warn.optional': 'Some columns are missing – the affected analyses are limited:',
+    'warn.feature': '{cols} → {feat}',
+
+    'feat.meld': 'Actions & exception messages', 'feat.pay': 'Payment forecast & terms', 'feat.orig': 'Values in order currency',
+    'feat.mfr': 'Manufacturer analysis', 'feat.ab': 'Order acknowledgments', 'feat.dispo': 'MRP controller filter',
+    'feat.resched': 'New date / Δ days', 'feat.excess': 'Excess value for cancellations', 'feat.inco': 'Incoterms', 'feat.qty': 'Open quantity',
+    'feat.supplier': 'Supplier analysis', 'feat.material': 'Material analysis',
+
+    'tab.overview': 'Overview', 'tab.actions': 'Actions', 'tab.payments': 'Payments & terms', 'tab.material': 'Material & manufacturers',
+
+    'kpi.total': 'Open order value', 'kpi.pos': 'PO items', 'kpi.overdue': 'Overdue',
+    'kpi.noab': 'Without order acknowledgment', 'kpi.sup': 'Suppliers', 'kpi.supSub': 'Suppliers with open items',
+    'kpi.rowsSub': '{n} schedule lines', 'kpi.posSub': 'from {n} purchase orders',
+    'kpi.overdueSub': '{n} items · {p} of value', 'kpi.noabSub': '{p} of items',
+
+    'month.title': 'Open order value by delivery month', 'month.sub': '{v} · total per delivery month{later}',
+    'later': 'Later', 'laterNote': ' · “Later” = from {m}', 'earlier': 'Earlier', 'earlierNote': ' · “Earlier” = before {m}', 'noData': 'No data in filter',
+    'leg.overdue': 'Overdue', 'leg.open': 'Not yet due', 'total': 'Total',
+
+    'ab.title': 'Order acknowledgments', 'ab.sub': 'Share of PO items with acknowledgment', 'ab.with': 'acknowledged', 'ab.yes': 'With OA', 'ab.no': 'Without OA',
+    'ab.note': '<strong>{n} items</strong> without acknowledgment are overdue or due within 14 days of the reference date.',
+    'ab.noteNone': 'No unacknowledged items that are overdue or due within 14 days.',
+
+    'meld.title': 'SAP exception messages', 'meld.sub': 'Open value per message · click a bar to filter · details on the “Actions” tab',
+    'meld.none': 'No message',
+    'sup.title': 'Top 10 suppliers by open order value',
+    'sup.sub': 'Top 10 = {p} of open value · click a bar to search for the supplier',
+    'tip.rows': '{n} schedule lines', 'tip.share': '{p} · {n} items',
+
+    'ampel.title': 'Deliveries – due date traffic light', 'ampel.sub': 'One row per schedule line · status relative to reference date · click a header to sort',
+    'st.all': 'All', 'st.overdue': 'Overdue', 'st.soon': '≤ 7 days', 'st.later': 'Later',
+    'status.overdue': 'Overdue', 'status.soon': '≤ 7 days', 'status.ok': 'On schedule',
+
+    'act.helpTitle': 'How to read this list', 'act.chartAria': 'Value per supplier for the selected action',
+    'act.tableSub': 'One row per schedule line · MRP controller selectable in the sidebar · click a header to sort',
+    'act.chartTitle': '{a}: top 10 suppliers', 'act.tableTitle': '{a} – work list',
+    'act.sub': '{v} at {n} suppliers · click a bar to search for the supplier',
+    'act.noneFilter': 'No schedule lines in the current filter (check sidebar).', 'act.noneFile': 'This message does not occur in the file.',
+    'act.tilePos': '{n} items', 'act.tileMedian': ' · median {d} days', 'act.tileExcess': ' · {n} with excess stock',
+    'act.empty': 'No schedule lines with this message in the current filter.',
+    'act.10.help': 'SAP needs the material <strong>earlier</strong> than the confirmed delivery date. “New date” is the date proposed by SAP, “Δ days” how many days earlier delivery would be needed. Candidates for an expedite request to the supplier – sorted by Δ days, the most urgent come first.',
+    'act.15.help': 'The requirement is <strong>later</strong> than the delivery date. Postponing frees up inventory and cash. “Δ days” = how many days later. Small shifts (e.g. < 14 days) are often not worth the effort – sort by Δ days and value.',
+    'act.20.help': 'There is <strong>no requirement</strong> for these schedule lines any more. “Excess” shows the value of stock above requirement (value excess, local currency) – high values are strong arguments for cancelling. Check outline agreements and cancellation costs first.',
+    'act.07.help': 'The delivery date is <strong>in the past</strong> but the goods have not been received. Ask the supplier for a new date and update it in SAP so MRP calculates correctly.',
+
+    'pay.k1': 'Due ≤ 30 days', 'pay.k2': 'Due in 31–90 days', 'pay.k3': 'Due > 90 days', 'pay.k4': 'Cash discount potential', 'pay.k5': 'Avg. payment term',
+    'pay.k5sub': 'value-weighted, net', 'pay.days': 'days',
+    'pay.kSub': '{n} schedule lines', 'pay.kSubLate': ' · {v} from overdue deliv.',
+    'pay.k4Sub': '{n} schedule lines with discount · {p} of value',
+    'pay.title': 'Outgoing payments by due month', 'pay.skonto': 'Take cash discount', 'pay.skontoTip': 'Pay at the discount date with deduction instead of net',
+    'pay.sub': '{v} {mode}{later}', 'pay.net': 'net', 'pay.withSkonto': 'after cash discount', 'pay.prepay': ' · incl. prepayment {v}',
+    'leg.payLate': 'from overdue deliveries', 'leg.payOn': 'from on-time deliveries',
+    'pay.note': '<strong>Assumptions:</strong> invoice on delivery day (baseline date = delivery date). For terms with “baseline date on the 30th of the month”, the month end applies. If a delivery is already overdue, delivery on the reference date is assumed. Prepayments are counted on the reference date but may already have been paid.',
+    'terms.title': 'Open value per payment term', 'terms.sub': 'Description per SAP terms table · days and discounts from the ZBK',
+    'terms.notInTable': 'not in terms table', 'terms.prepay': 'Prepayment', 'terms.daysShort': '{d} d',
+    'basis.prepay': 'Prepayment', 'basis.p29': '29th in 2 months', 'basis.eom': 'Month end', 'basis.delivery': 'Delivery date',
+    'terms.foot': '{n} payment terms · total {v}',
+    'inco.title': 'Open value per Incoterm', 'inco.sub': 'Delivery term only, without location', 'inco.noText': 'no description',
+
+    'mfr.title': 'Top 10 manufacturers by open order value', 'mat.title': 'Top 10 materials by open order value',
+    'mfr.sub': '{n} manufacturers · top 10 = {p} of value{none} · click = search', 'mfr.noneVal': ' · without manufacturer: {v}', 'mfr.empty': 'No manufacturer data in filter',
+    'mat.sub': '{n} materials · top 10 = {p} of value · click = search', 'mat.noMfr': 'manufacturer unknown',
+    'matTable.title': 'Materials consolidated', 'matTable.sub': 'One row per material across all open schedule lines · click a header to sort',
+    'mat.nSuppliers': '{n} suppliers', 'mat.foot': '{n} materials · total {v}',
+
+    'tbl.more': '{a} of {b} rows shown – the Excel export contains all. ', 'tbl.rows': '{n} rows', 'tbl.rowsSum': '{n} rows · total {v}',
+    'tbl.empty': 'No entries for this selection.', 'tbl.emptyRows': 'No schedule lines for this selection.',
+    'ab.missing': '✗ missing',
+
+    'col.status': 'Status', 'col.delivery': 'Delivery date', 'col.deliveryDate': 'Delivery date', 'col.order': 'Purchase order',
+    'col.beleg': 'Purchasing document', 'col.pos': 'Item', 'col.eint': 'Schedule line',
+    'col.supplier': 'Supplier', 'col.material': 'Material', 'col.text': 'Short text', 'col.dispo': 'MRP controller',
+    'col.ab': 'OA', 'col.abLong': 'Order acknowledgment', 'col.meld': 'Exception message',
+    'col.amount': 'Amount {c}', 'col.value': 'Value {c}',
+    'col.newDate': 'New date (SAP)', 'col.newDateTip': 'Rescheduling date', 'col.diff': 'Δ days', 'col.diffTip': 'New date minus delivery date', 'col.diffLong': 'Difference days',
+    'col.since': 'Days overdue', 'col.qty': 'Open qty', 'col.unit': 'UoM',
+    'col.excess': 'Excess {c}', 'col.excessTip': 'Value excess – value of stock above requirement (local currency)',
+    'col.zbed': 'Terms', 'col.zbedLong': 'Terms of payment', 'col.termText': 'Description', 'col.net': 'Net', 'col.netLong': 'Net days',
+    'col.skonto': 'Cash discount', 'col.basis': 'Baseline date', 'col.positions': 'Items', 'col.share': 'Share',
+    'col.mfr': 'Manufacturer', 'col.mpn': 'Manufacturer part no.', 'col.suppliers': 'Suppliers', 'col.abc': 'ABC',
+    'col.next': 'Next date', 'col.overdueVal': 'thereof overdue {c}',
+
+    'file.ampel': 'Procurement_Deliveries', 'sheet.ampel': 'Deliveries',
+    'file.actions': 'Procurement_Actions', 'sheet.actions': 'Actions',
+    'file.terms': 'Procurement_PaymentTerms', 'sheet.terms': 'Payment terms',
+    'file.material': 'Procurement_Materials', 'sheet.material': 'Materials',
+    'file.stichtag': 'RefDate',
+
+    'unit.mio': ' M', 'unit.tsd': 'k',
+  },
+};
+
+const MONTHS = {
+  de: ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'],
+  en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+};
+
+function t(key, p = {}) {
+  let s = I18N[lang][key] ?? I18N.de[key] ?? key;
+  return s.replace(/\{(\w+)\}/g, (m, k) => p[k] !== undefined ? p[k] : m);
+}
+
+function applyStaticTranslations() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = t(el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-html]').forEach(el => el.innerHTML = t(el.dataset.i18nHtml));
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => el.placeholder = t(el.dataset.i18nPh));
+  document.querySelectorAll('[data-i18n-title]').forEach(el => el.title = t(el.dataset.i18nTitle));
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+}
+
+function setLanguage(l) {
+  lang = I18N[l] ? l : 'de';
+  $('langSelect').value = lang;
+  try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+  applyStaticTranslations();
+  syncToggleLabel('dispoList');
+  syncToggleLabel('meldList');
+  if (lastError) showError(lastError.titleKey, lastError.html);
+  if (lastWarning) showWarning(lastWarning);
+  if (!state.rows.length) return;
+  // geladene Daten in der neuen Sprache neu darstellen
+  $('dropTitle').textContent = state.fileName;
+  $('dropHint').textContent = t('drop.loadedHint', { n: fmtInt(state.rows.length) });
+  $('meldList').querySelectorAll('.check-item').forEach((el, i) => {
+    const name = meldLabel(state.meldungen[i].name);
+    el.querySelector('.check-name').textContent = name;
+    el.querySelector('.check-name').title = name;
+  });
+  buildCurrencyChips();
+  updateStichtagUI();
+  applyFilters();
+}
+
+/* ═══════════════════════════════════════════════════
+   KONSTANTEN
+═══════════════════════════════════════════════════ */
+const C = { accent: '#6366f1', red: '#ef4444', gap: '#1b2537', text2: '#94a3b8', grid: 'rgba(148,163,184,0.12)' };
+const TABLE_LIMIT = 300;
+
+/* SAP-Ausnahmemeldungen: der Code ist sprachunabhängig (07/10/15/20) */
+const MELD = {
+  '07': { de: 'Endtermin in Vergangenheit', en: 'Finish date in the past', shortDe: 'Endtermin i. d. Vergangenheit', shortEn: 'Finish date in past' },
+  '10': { de: 'Vorgang vorziehen',          en: 'Reschedule in',           shortDe: 'Vorziehen',   shortEn: 'Reschedule in' },
+  '15': { de: 'Vorgang verschieben',        en: 'Reschedule out',          shortDe: 'Verschieben', shortEn: 'Reschedule out' },
+  '20': { de: 'Vorgang stornieren',         en: 'Cancel process',          shortDe: 'Stornieren',  shortEn: 'Cancel' },
+};
+const MELD_TEXT_TO_CODE = Object.fromEntries(Object.entries(MELD).flatMap(([code, m]) => [[m.de.toLowerCase(), code], [m.en.toLowerCase(), code]]));
+const MELD_ORDER = ['10', '15', '20', '07'];
+const NO_MELDUNG = '';
+
+const ACTIONS = [
+  { key: '10', color: 'red' },
+  { key: '15', color: 'amber' },
+  { key: '20', color: 'grey' },
+  { key: '07', color: 'red' },
+];
+
+function meldLabel(key)  { return MELD[key] ? MELD[key][lang] : (key || t('meld.none')); }
+function meldShort(key)  { return MELD[key] ? MELD[key][lang === 'de' ? 'shortDe' : 'shortEn'] : (key || t('meld.none')); }
+
+/* Zahlungsbedingungen – Erläuterungen gemäss SAP-Konditionentabelle (Tage/Skonto kommen aus der ZBK) */
+const TERM_TEXT = {
+  '0000': 'sofort zahlbar, netto', '0001': 'Vorauskasse, netto', '00F': 'kostenlos', '00NN': 'Lieferung per Nachnahme (CH)',
+  '07N': 'innerhalb von 7 Tagen ohne Abzug', '10': 'innerhalb 10 Tagen', '10N': 'innerhalb von 10 Tagen ohne Abzug',
+  '1203': '120 Tage netto, 14 Tage 3%', '120N': 'innerhalb von 120 Tagen ohne Abzug', '120S': '120 Tage netto, 10 Tage 2%',
+  '14N': 'innerhalb von 14 Tagen ohne Abzug', '150N': 'innerhalb von 150 Tagen ohne Abzug', '15N': 'innerhalb von 15 Tagen ohne Abzug',
+  '17N': 'innerhalb von 14 Tagen ohne Abzug', '180N': 'innerhalb von 180 Tagen ohne Abzug', '180O': 'innerhalb von 180 Tagen ohne Abzug',
+  '1DFF': 'innerh. 120 Tagen o. Abzug B-Datum am 30. des Mon.', '20N': 'innerhalb von 20 Tagen ohne Abzug',
+  '20S3': 'innerhalb von 20 Tagen 3 % Rabatt', '210N': 'innerhalb von 210 Tagen ohne Abzug', '21N': 'innerhalb von 21 Tagen ohne Abzug',
+  '240N': 'innerhalb von 240 Tagen ohne Abzug', '29P2': 'bis zum 29. in 2 Monaten ohne Abzug', '30N': 'innerhalb von 30 Tagen ohne Abzug',
+  '30S1': '30 Tage netto, 10 Tage 1%', '30S2': '30 Tage netto, 10 Tage 2%', '30S3': '30 Tage netto, 10 Tage 3%',
+  '30S4': '30 Tage netto, 14 Tage 2%', '30S5': '30 Tage netto, 14 Tage 3%', '30S7': '30 Tage netto, 10 Tage 0.75%',
+  '30S8': '30 Tage netto, 14 Tage 1%', '30S9': '30 Tage netto, 14 Tage 0.75%', '30SA': '30 Tage netto, 10 Tage 5%',
+  '30SB': '30 Tage netto, 8 Tage 2%', '30SC': '30 Tage 1%', '30SD': '30 Tage netto, 14 Tage 1.5 %',
+  '3DFF': 'innerh. 30 Tagen o. Abzug B-Datum am 30. des Mon.', '45N': 'innerhalb von 45 Tagen ohne Abzug',
+  '45N1': 'innerhalb von 45 Tagen ohne Abzug / 14 Tage 1%', '45N2': 'innerhalb von 45 Tagen ohne Abzug / 10 Tage 1%',
+  '45N3': 'innerhalb von 45 Tagen ohne Abzug / 10 Tage 1.5%', '45N4': 'innerhalb von 45 Tagen ohne Abzug / 10 Tage 2%',
+  '45N5': 'innerhalb von 45 Tagen ohne Abzug / 14 Tage 2%', '45N6': 'innerhalb von 45 Tagen ohne Abzug / 14 Tage 1.5%',
+  '4DFF': 'innerhalb von 45 Tagen ohne Abzug, Basisdatum am 30. des Monats', '60N': 'innerhalb von 60 Tagen ohne Abzug',
+  '60S2': '60 Tage netto, 30 Tage 2%', '60S3': '60 Tage netto, 30 Tage 2%, 14 Tage 3%', '60S4': '60 Tage netto, 14 Tage 2%',
+  '60S5': '60 Tage netto, 10 Tage 2%', '60S6': '60 Tage netto, 30 Tage 2%, 10 Tage 3%', '60S7': '60 Tage netto, 30 Tage 3%',
+  '60S8': '60 Tage netto, 10 Tage 3%', '60S9': '60 Tage netto, 14 Tage 3%', '65N': '75 Tage netto',
+  '6DFF': 'innerh. 60 Tagen o. Abzug B-Datum am 30. des Mon.', '6DFG': 'innerh. 60 T. o. Abzug B-Datum 30. Mn. mit Belegd.',
+  '75N': '75 Tage netto', '75S2': '75 Tage netto, 10 Tage 2%', '7DFF': 'innerh. 70 Tagen o. Abzug, BasisDat am 30. d. Mon.',
+  '90N': 'innerhalb von 90 Tagen ohne Abzug', '90S1': '90 Tage netto, 30 Tage 3%', '90S2': '90 Tage netto, 30 Tage 2%, 10 Tage 3%',
+  '90S3': '90 Tage netto, 14 Tage 3%', '90S4': '90 Tage netto, 30 Tage 2%, 14 Tage 3%', '90S5': '90 Tage netto, 30 Tage 2%',
+  '90S6': '90 Tage netto, 14 Tage 1%', '90S7': '90 Tage netto, 10 Tage 3%', '90S8': '90 Tage netto, 30 Tage 1%',
+  '90S9': '90 Tage netto, 14 Tage 2% Skonto', '90SA': '90 Tage netto, 10 Tage 2% Skonto', '90SB': '90 Tage netto, 14 Tage 1.5% Skonto',
+  '95N': 'innerhalb von 90 Tagen ohne Abzug', '9DFF': 'innerh. 90 Tagen o. Abzug B-Datum am 30. des Mon.',
+  '9DFG': 'innerh. 90 T. o. Abzug B-Datum 30. Mn. mit Belegd.', 'APG': 'Vorauszahlung "Wire Transfer"', 'PPM': 'Vorauszahlung "Cash"',
+  'R1DF': 'innerh. 120 Tagen o. Abzug B-Datum am 30. des Mon.', 'R3DF': 'innerh. 30 Tagen o. Abzug B-Datum am 30. des Mon.',
+  'R6DF': 'innerh. 60 Tagen o. Abzug B-Datum am 30. des Mon.', 'R9DF': 'innerh. 90 Tagen o. Abzug B-Datum am 30. des Mon.',
+  'T/T': 'Vorauszahlung "Wire Transfer"', 'TT': 'Telegraphic Transfer (siehe Text)',
+};
+/* Englisch: Sonderfälle fest, Rest wird aus Tagen/Skonto erzeugt */
+const TERM_TEXT_EN = {
+  '0000': 'Due immediately, net', '0001': 'Prepayment, net', '00F': 'Free of charge', '00NN': 'Cash on delivery (CH)',
+  '20S3': 'Within 20 days 3 % discount', '29P2': 'By the 29th of the 2nd month, net',
+  'APG': 'Prepayment "Wire Transfer"', 'PPM': 'Prepayment "Cash"', 'T/T': 'Prepayment "Wire Transfer"', 'TT': 'Telegraphic transfer (see text)',
+};
+const PREPAY_CODES = new Set(['0001', 'APG', 'PPM', 'T/T', 'TT']);
+
+function termText(term) {
+  if (lang === 'de') return term.text;
+  if (TERM_TEXT_EN[term.code]) return TERM_TEXT_EN[term.code];
+  if (!term.text && !term.net && !term.tiers.length) return '';
+  const tiers = term.tiers.slice().sort((a, b) => a.days - b.days).map(x => `${x.days} days ${fmtPct(x.pct)}`);
+  let s = tiers.length ? `${term.net} days net, ${tiers.join(', ')}` : `Within ${term.net} days net`;
+  if (term.eom) s += ' (baseline date: end of month)';
+  return s;
+}
+
+const INCOTERM_TEXT = {
+  de: {
+    EXW: 'Ex Works – ab Werk', FCA: 'Free Carrier – frei Frachtführer', FAS: 'Free Alongside Ship – frei Längsseite Schiff',
+    FOB: 'Free on Board – frei an Bord', CFR: 'Cost and Freight – Kosten und Fracht', CIF: 'Cost, Insurance and Freight',
+    CPT: 'Carriage Paid To – frachtfrei', CIP: 'Carriage and Insurance Paid To – frachtfrei versichert',
+    DAP: 'Delivered at Place – geliefert benannter Ort', DPU: 'Delivered at Place Unloaded – geliefert entladen',
+    DDP: 'Delivered Duty Paid – geliefert verzollt', DAT: 'Delivered at Terminal (veraltet, heute DPU)',
+    DDU: 'Delivered Duty Unpaid (veraltet, heute DAP)', FH: 'Frei Haus (SAP-intern)', UN: 'Unfrei (SAP-intern)',
+  },
+  en: {
+    EXW: 'Ex Works', FCA: 'Free Carrier', FAS: 'Free Alongside Ship', FOB: 'Free on Board', CFR: 'Cost and Freight',
+    CIF: 'Cost, Insurance and Freight', CPT: 'Carriage Paid To', CIP: 'Carriage and Insurance Paid To',
+    DAP: 'Delivered at Place', DPU: 'Delivered at Place Unloaded', DDP: 'Delivered Duty Paid',
+    DAT: 'Delivered at Terminal (obsolete, now DPU)', DDU: 'Delivered Duty Unpaid (obsolete, now DAP)',
+    FH: 'Free domicile (SAP internal)', UN: 'Carriage forward (SAP internal)',
+  },
+};
+
+/* ═══════════════════════════════════════════════════
+   SPALTEN-ZUORDNUNG (DE/EN, Reihenfolge egal)
+   names: alle bekannten Überschriften (DE, EN, ältere Exporte)
+═══════════════════════════════════════════════════ */
+const FIELDS = {
+  beleg:      { names: ['Einkaufsbeleg', 'Purchasing Document'], required: true },
+  pos:        { names: ['Position', 'Item'], required: true },
+  datum:      { names: ['Lieferdatum', 'Delivery Date'], required: true },
+  betrag:     { names: ['Kaufbetrag in HW', 'Purchase Amount LC'], required: true },
+  eint:       { names: ['Einteilung', 'Schedule Line'] },
+  belegdatum: { names: ['Belegdatum', 'Document Date'] },
+  hw:         { names: ['Hauswährung', 'Local currency'] },
+  orig:       { names: ['Nettowert offen', 'Net Value Open'], feat: 'feat.orig' },
+  waehrung:   { names: ['Währung', 'Currency'], multi: true, feat: 'feat.orig' },
+  ab:         { names: ['Auftragsbestätigung', 'Order Acknowledgment'], feat: 'feat.ab' },
+  dispo:      { names: ['Name Disponent', 'MRP controller name'], feat: 'feat.dispo' },
+  dispoNr:    { names: ['Disponent', 'MRP Controller'] },
+  kreditor:   { names: ['Kreditor', 'Supplier'] },
+  lieferant:  { names: ['Name 1'], feat: 'feat.supplier' },
+  material:   { names: ['Material'], feat: 'feat.material' },
+  kurztext:   { names: ['Kurztext', 'Short Text', 'Materialkurztext', 'Material Description'] },
+  hersteller: { names: ['Herstellername', 'Manufacturer Name', 'Name 2'], feat: 'feat.mfr' },
+  herstellerNr: { names: ['Hersteller', 'Manufacturer'] },
+  mpn:        { names: ['HerstellerteileNummer', 'Manufacturer Part No.'] },
+  abc:        { names: ['ABC-Kennzeichen', 'ABC Indicator'] },
+  menge:      { names: ['Offene Bestellmenge', 'Open Purchase Order Quantity'], feat: 'feat.qty' },
+  me:         { names: ['Basismengeneinheit', 'Base Unit of Measure'] },
+  meldung:    { names: ['Ausnahmemeldung', 'Exception Message'], multi: true, feat: 'feat.meld' },
+  umterm:     { names: ['Umterminierungsdatum', 'Rescheduling date'], feat: 'feat.resched' },
+  diff:       { names: ['Differenztage', 'Diff. days'], feat: 'feat.resched' },
+  excess:     { names: ['GWert excess', 'Value excess'], feat: 'feat.excess' },
+  zbed:       { names: ['Zahlungsbedingung', 'Terms of Payment'], feat: 'feat.pay' },
+  zin:        { names: ['Zahlung in', 'Payment in'], multi: true, feat: 'feat.pay' },
+  sk1:        { names: ['Skontosatz 1', 'CD Percentage 1'] },
+  sk2:        { names: ['Skontosatz 2', 'Disc.percent 2'] },
+  inco:       { names: ['Incoterms'], feat: 'feat.inco' },
+};
+
+/* ═══════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════ */
+const state = {
+  rows: [], filtered: [],
+  hw: 'CHF',
+  curMode: 'HW',          // 'HW' oder Bestellwährung (z. B. 'EUR')
+  hasOrigValues: false,
+  stichtag: null, stichtagAuto: null, stichtagTs: null, stichtagManual: false,
+  dateMin: null, dateMax: null,
+  dispos: [], meldungen: [],
+  view: 'overview',
+  ampelStatus: 'all',
+  action: '10',
+};
+const charts = {};
+let lastError = null, lastWarning = null;
+const $ = id => document.getElementById(id);
+const cur = () => state.curMode === 'HW' ? state.hw : state.curMode;
+
+/* ═══════════════════════════════════════════════════
+   SIDEBAR TOGGLE
+═══════════════════════════════════════════════════ */
+$('sidebarToggle').addEventListener('click', () => {
+  if (window.matchMedia('(max-width: 900px)').matches) document.body.classList.toggle('sidebar-open');
+  else document.body.classList.toggle('sidebar-hidden');
+  setTimeout(() => Object.values(charts).forEach(c => c && c.resize()), 0);
+});
+
+/* ═══════════════════════════════════════════════════
+   DATEI LADEN
+═══════════════════════════════════════════════════ */
+const dropZone  = $('dropZone');
+const fileInput = $('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+  fileInput.value = '';
+});
+
+function processFile(file) {
+  hideError();
+  hideWarning();
+  if (!/\.(xlsx|xls|xlsm)$/i.test(file.name)) {
+    showError('err.type', () => t('err.typeMsg', { f: escHtml(file.name) }));
+    return;
+  }
+  showLoading(true);
+  const reader = new FileReader();
+  reader.onload = e => {
+    setTimeout(() => {
+      try {
+        const wb  = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const ws  = wb.Sheets[wb.SheetNames[0]];
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true, blankrows: false });
+        loadRows(aoa, file.name);
+      } catch (err) {
+        console.error(err);
+        const msg = err.i18n ? () => t(err.i18n) : () => escHtml(err.message);
+        showError('err.read', msg);
+      } finally {
+        showLoading(false);
+      }
+    }, 20);
+  };
+  reader.onerror = () => { showLoading(false); showError('err.read', () => t('err.readMsg')); };
+  reader.readAsArrayBuffer(file);
+}
+
+function i18nError(key) { const e = new Error(key); e.i18n = key; return e; }
+
+const normHeader = s => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+/** Spaltenindizes je Feld ermitteln – unabhängig von Reihenfolge und Sprache */
+function resolveColumns(headers) {
+  const idx = new Map();
+  headers.forEach((h, i) => {
+    const k = normHeader(h);
+    if (!k) return;
+    if (!idx.has(k)) idx.set(k, []);
+    idx.get(k).push(i);
+  });
+  const H = {};
+  for (const [field, def] of Object.entries(FIELDS)) {
+    let found = [];
+    for (const n of def.names) { const hit = idx.get(normHeader(n)); if (hit) { found = hit; break; } }
+    H[field] = def.multi ? found : (found.length ? found[0] : null);
+  }
+  return H;
+}
+
+/** Bei doppelter "Währung": die Bestellwährung ist die, bei der "Währung = HW" mit "Nettowert offen = Kaufbetrag in HW" zusammenfällt */
+function pickOrderCurrency(cands, data, H) {
+  if (cands.length <= 1) return cands.length ? cands[0] : null;
+  if (H.orig === null) return cands[0];
+  let best = cands[0], bestScore = -1;
+  for (const c of cands) {
+    let score = 0;
+    for (const r of data) {
+      const hwAmt = toNumber(r[H.betrag]), orig = toNumber(r[H.orig]);
+      if (!(hwAmt > 0 && orig > 0)) continue;
+      const hw = H.hw !== null ? String(r[H.hw] ?? '').trim() : 'CHF';
+      const same = String(r[c] ?? '').trim() === hw;
+      const equal = Math.abs(orig - hwAmt) <= Math.max(0.02, hwAmt * 0.005);
+      if (same === equal) score++;
+    }
+    if (score > bestScore) { best = c; bestScore = score; }
+  }
+  return best;
+}
+
+/** Bei doppelter "Ausnahmemeldung": eine Spalte enthält den Code (07, 10, …), die andere den Text */
+function splitMeldungColumns(cands, data) {
+  let code = null, text = null;
+  for (const c of cands) {
+    const vals = data.map(r => r[c]).filter(v => v !== null && v !== '' && String(v).trim() !== '');
+    const numeric = vals.filter(v => /^\d{1,2}(\.0+)?$/.test(String(v).trim())).length;
+    if (vals.length && numeric / vals.length > 0.9) { if (code === null) code = c; }
+    else if (text === null) text = c;
+  }
+  return { code, text };
+}
+
+function normMeldCode(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v).trim();
+  if (!/^\d{1,2}(\.0+)?$/.test(s)) return '';
+  return String(Math.round(+s)).padStart(2, '0');
+}
+
+function loadRows(aoa, fileName) {
+  if (!aoa.length) throw i18nError('err.emptySheet');
+
+  // Kopfzeile in den ersten 10 Zeilen suchen
+  const belegNames = FIELDS.beleg.names.map(normHeader);
+  const hIdx = aoa.slice(0, 10).findIndex(r => r && r.some(c => belegNames.includes(normHeader(c))));
+  const headerRow = hIdx >= 0 ? aoa[hIdx] : aoa[0];
+  const data = aoa.slice((hIdx >= 0 ? hIdx : 0) + 1).filter(r => r && r.some(v => v !== null && v !== ''));
+  const H = resolveColumns(headerRow);
+
+  // Pflichtspalten prüfen → Fehlermeldung mit Liste
+  const missing = Object.entries(FIELDS).filter(([k, d]) => d.required && H[k] === null).map(([, d]) => d.names);
+  if (missing.length) {
+    showError('err.missing', () =>
+      t('err.missingMsg', { f: escHtml(fileName) }) +
+      '<ul>' + missing.map(n => `<li><code>${escHtml(n[lang === 'de' ? 0 : 1])}</code> / <code>${escHtml(n[lang === 'de' ? 1 : 0])}</code></li>`).join('') + '</ul>' +
+      (hIdx < 0 ? `<p style="margin-top:6px">${t('err.noHeader')}</p>` : '') +
+      `<p style="margin-top:6px">${t('err.missingHint')}</p>`);
+    return;
+  }
+
+  // Optionale Spalten → Warnung, welche Auswertungen eingeschränkt sind
+  const featMissing = new Map();
+  for (const [k, d] of Object.entries(FIELDS)) {
+    const absent = d.multi ? !H[k].length : H[k] === null;
+    if (!absent || !d.feat) continue;
+    if (k === 'lieferant' && H.kreditor !== null) continue;
+    if (k === 'dispo' && H.dispoNr !== null) continue;
+    if (k === 'hersteller' && H.herstellerNr !== null) continue;
+    if (!featMissing.has(d.feat)) featMissing.set(d.feat, []);
+    featMissing.get(d.feat).push(d.names);
+  }
+
+  // Doppelte Spalten auflösen
+  const curCol = pickOrderCurrency(H.waehrung, data, H);
+  const meld   = splitMeldungColumns(H.meldung, data);
+
+  const str = v => (v === null || v === undefined) ? '' : String(v).trim();
+  const num = c => r => c !== null && c !== undefined ? toNumber(r[c]) : 0;
+  const termCache = new Map();
+
+  state.rows = data
+    .filter(r => str(r[H.beleg]) !== '')
+    .map(r => {
+      const beleg = str(r[H.beleg]);
+      const pos   = str(r[H.pos]);
+      const zbed  = H.zbed !== null ? str(r[H.zbed]) : '';
+      const zin   = H.zin.map(c => toNumber(r[c]));
+      const sk1   = num(H.sk1)(r), sk2 = num(H.sk2)(r);
+      const termKey = [zbed, ...zin, sk1, sk2].join('|');
+      if (!termCache.has(termKey)) termCache.set(termKey, termInfo(zbed, zin, sk1, sk2, H.zin.length > 0));
+
+      let meldung = meld.code !== null ? normMeldCode(r[meld.code]) : '';
+      if (!meldung && meld.text !== null) {
+        const txt = str(r[meld.text]);
+        meldung = MELD_TEXT_TO_CODE[txt.toLowerCase()] || txt;
+      }
+
+      return {
+        beleg, pos,
+        eint:        H.eint !== null ? str(r[H.eint]) : '',
+        key:         beleg + '-' + pos,
+        lieferdatum: parseDate(r[H.datum]),
+        belegdatum:  H.belegdatum !== null ? parseDate(r[H.belegdatum]) : null,
+        betragHW:    toNumber(r[H.betrag]),
+        betragOrig:  H.orig !== null ? toNumber(r[H.orig]) : 0,
+        waehrung:    curCol !== null ? str(r[curCol]) : '',
+        ab:          H.ab !== null ? str(r[H.ab]) : '',
+        dispo:       (H.dispo !== null && str(r[H.dispo])) || (H.dispoNr !== null && str(r[H.dispoNr])) || '—',
+        kreditor:    H.kreditor !== null ? str(r[H.kreditor]) : '',
+        lieferant:   (H.lieferant !== null && str(r[H.lieferant])) || (H.kreditor !== null && str(r[H.kreditor])) || '—',
+        material:    H.material !== null ? str(r[H.material]) : '',
+        kurztext:    (H.kurztext !== null && str(r[H.kurztext])) || '—',
+        hersteller:  (H.hersteller !== null && str(r[H.hersteller])) || (H.herstellerNr !== null && str(r[H.herstellerNr])) || '',
+        mpn:         H.mpn !== null ? str(r[H.mpn]) : '',
+        abc:         H.abc !== null ? str(r[H.abc]) : '',
+        menge:       num(H.menge)(r),
+        me:          H.me !== null ? str(r[H.me]) : '',
+        meldung,
+        umterm:      H.umterm !== null ? parseDate(r[H.umterm]) : null,
+        diff:        H.diff !== null && r[H.diff] !== null && r[H.diff] !== '' ? toNumber(r[H.diff]) : null,
+        excess:      num(H.excess)(r),
+        zbed,
+        term:        termCache.get(termKey),
+        inco:        (H.inco !== null && str(r[H.inco]).toUpperCase()) || '—',
+      };
+    });
+
+  if (!state.rows.length) throw i18nError('err.noRows');
+
+  const hwRow = H.hw !== null && data.find(r => str(r[H.hw]));
+  state.hw = hwRow ? str(hwRow[H.hw]) : 'CHF';
+  state.hasOrigValues = H.orig !== null && curCol !== null;
+  state.curMode = 'HW';
+
+  const times = state.rows.filter(r => r.lieferdatum).map(r => r.lieferdatum.getTime());
+  state.dateMin = times.length ? new Date(times.reduce((a, b) => Math.min(a, b))) : null;
+  state.dateMax = times.length ? new Date(times.reduce((a, b) => Math.max(a, b))) : null;
+
+  detectStichtag(fileName);
+
+  state.dispos    = countBy(state.rows, r => r.dispo).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  state.meldungen = countBy(state.rows, r => r.meldung).sort((a, b) => meldRank(a.name) - meldRank(b.name) || a.name.localeCompare(b.name, 'de'));
+
+  buildCheckList('dispoList', state.dispos, x => x);
+  buildCheckList('meldList', state.meldungen, meldLabel);
+  buildCurrencyChips();
+  $('dispoSearch').value = '';
+  $('searchInput').value = '';
+  setDateRange(state.dateMin, state.dateMax);
+  markPreset('all');
+
+  if (featMissing.size) {
+    lastWarning = featMissing;
+    showWarning(featMissing);
+  }
+
+  $('filePill').textContent = '📄 ' + fileName;
+  $('filePill').title = fileName;
+  $('filePill').hidden = false;
+
+  dropZone.classList.add('loaded');
+  $('dropIcon').textContent  = '✓';
+  state.fileName = fileName;
+  $('dropTitle').textContent = fileName;
+  $('dropHint').textContent  = t('drop.loadedHint', { n: fmtInt(state.rows.length) });
+
+  $('emptyState').style.display = 'none';
+  $('dashboard').hidden = false;
+
+  applyFilters();
+}
+
+/* ═══════════════════════════════════════════════════
+   STICHTAG – aus dem Zeitstempel im Dateinamen
+   (SAP-Standard: EXPORT_JJJJMMTT_HHMMSS), sonst heute
+═══════════════════════════════════════════════════ */
+function detectStichtag(fileName) {
+  const m = fileName.match(/(20\d{2})(\d{2})(\d{2})[_\-]?(\d{2})?(\d{2})?(\d{2})?/);
+  let d = null, ts = null;
+  if (m) {
+    const cand = new Date(+m[1], +m[2] - 1, +m[3]);
+    if (cand.getFullYear() === +m[1] && cand.getMonth() === +m[2] - 1 && cand.getDate() === +m[3]) {
+      d = cand;
+      ts = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+      if (!m[4]) ts = null;
+    }
+  }
+  state.stichtagAuto = d || startOfToday();
+  state.stichtagTs   = d ? (ts || d) : null;
+  state.stichtagManual = false;
+  state.stichtag = state.stichtagAuto;
+  updateStichtagUI();
+}
+
+function updateStichtagUI() {
+  const d = state.stichtag;
+  if (!d) return;
+  $('stichtagInput').value = toInputDate(d);
+  $('stichtagReset').hidden = !state.stichtagManual;
+  let hint, pill;
+  if (state.stichtagManual)      { hint = t('stichtag.manual'); pill = t('stichtag.pillManual', { d: fmtDate(d) }); }
+  else if (state.stichtagTs)     { hint = t('stichtag.fromFile', { ts: fmtDateTime(state.stichtagTs) }); pill = t('stichtag.pill', { d: fmtDate(d) }); }
+  else                           { hint = t('stichtag.today'); pill = t('stichtag.pillToday', { d: fmtDate(d) }); }
+  $('stichtagHint').textContent = hint;
+  $('stichtagPill').textContent = pill;
+  $('stichtagPill').title = hint;
+  $('stichtagPill').hidden = false;
+}
+
+$('stichtagInput').addEventListener('change', e => {
+  const d = fromInputDate(e.target.value);
+  if (!d || !state.rows.length) return;
+  state.stichtag = d;
+  state.stichtagManual = true;
+  updateStichtagUI();
+  applyFilters();
+});
+$('stichtagReset').addEventListener('click', () => {
+  state.stichtag = state.stichtagAuto;
+  state.stichtagManual = false;
+  updateStichtagUI();
+  applyFilters();
+});
+
+/* ═══════════════════════════════════════════════════
+   ZAHLUNGSBEDINGUNGEN
+   SAP erzwingt Tag 1 < Tag 2 < Tag 3. Daher werden die (ggf. umsortierten)
+   "Zahlung in"-Spalten nach Grösse geordnet: kleinste = Skontofrist 1,
+   zweite = Skontofrist 2, grösste = Nettofrist. Fallback: Erläuterungstext.
+═══════════════════════════════════════════════════ */
+function termInfo(code, zin, sk1, sk2, hasCols) {
+  const text = TERM_TEXT[code] || '';
+  const info = { code, text, net: 0, tiers: [], eom: false, prepay: false, p29: false };
+
+  info.prepay = PREPAY_CODES.has(code) || /vorauszahlung|vorauskasse/i.test(text);
+  info.eom    = /DF[FG]$/.test(code) || /30\.\s*(des|d\.|mn)/i.test(text);
+  info.p29    = code === '29P2';
+
+  const days = zin.filter(v => v > 0).sort((a, b) => a - b);
+  if (hasCols && (days.length || code === '0000')) {
+    info.net = days.length ? days[days.length - 1] : 0;
+    if (sk1 > 0 && days.length) info.tiers.push({ days: days[0], pct: sk1 });
+    if (sk2 > 0 && days.length > 1) info.tiers.push({ days: days[1], pct: sk2 });
+  } else if (text) {
+    const n = text.match(/(\d+)\s*Tage\s+netto/i) || text.match(/(\d+)\s*T(?:age|agen|\.)?/i);
+    info.net = n ? +n[1] : 0;
+    for (const m of text.matchAll(/(\d+)\s*Tage\s+([\d.]+)\s*%/g)) info.tiers.push({ days: +m[1], pct: +m[2] });
+  }
+  info.tiers.sort((a, b) => b.pct - a.pct);
+  return info;
+}
+
+function termBasis(term) {
+  if (term.prepay) return t('basis.prepay');
+  if (term.p29)    return t('basis.p29');
+  if (term.eom)    return t('basis.eom');
+  return t('basis.delivery');
+}
+
+/** Fälligkeit + Betrag einer Einteilung */
+function paymentOf(r, skonto) {
+  const term = r.term;
+  const late = !r.lieferdatum || r.lieferdatum < state.stichtag;
+  let base = late ? state.stichtag : r.lieferdatum;
+  const tier = skonto && term.tiers.length ? term.tiers[0] : null;
+  let due;
+  if (term.prepay) due = state.stichtag;
+  else if (term.p29) due = new Date(base.getFullYear(), base.getMonth() + 2, 29);
+  else {
+    if (term.eom) base = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+    due = addDays(base, tier ? tier.days : term.net);
+  }
+  if (due < state.stichtag) due = state.stichtag;
+  return { due, amount: r.val * (tier ? 1 - tier.pct / 100 : 1), late };
+}
+
+/* ═══════════════════════════════════════════════════
+   FILTER-UI
+═══════════════════════════════════════════════════ */
+function buildCheckList(listId, items, labelFn) {
+  $(listId).innerHTML = items.map((it, i) => {
+    const label = labelFn(it.name);
+    return `
+    <label class="check-item" data-name="${escHtml(label.toLowerCase())}">
+      <input type="checkbox" data-idx="${i}" checked />
+      <span class="check-name" title="${escHtml(label)}">${escHtml(label)}</span>
+      <span class="check-count">${fmtInt(it.count)}</span>
+    </label>`;
+  }).join('');
+  syncToggleLabel(listId);
+}
+
+function selectedNames(listId, items) {
+  return new Set([...$(listId).querySelectorAll('input:checked')].map(c => items[+c.dataset.idx].name));
+}
+
+function syncToggleLabel(listId) {
+  const btn = $(listId === 'dispoList' ? 'dispoToggle' : 'meldToggle');
+  const boxes = [...$(listId).querySelectorAll('.check-item:not(.hidden) input')];
+  btn.textContent = !boxes.length || boxes.every(c => c.checked) ? t('btn.allOff') : t('btn.allOn');
+}
+
+function toggleAll(listId) {
+  const boxes = [...$(listId).querySelectorAll('.check-item:not(.hidden) input')];
+  const allOn = boxes.every(c => c.checked);
+  boxes.forEach(c => c.checked = !allOn);
+  syncToggleLabel(listId);
+  applyFilters();
+}
+
+['dispoList', 'meldList'].forEach(id => $(id).addEventListener('change', () => { syncToggleLabel(id); applyFilters(); }));
+$('dispoToggle').addEventListener('click', () => toggleAll('dispoList'));
+$('meldToggle').addEventListener('click',  () => toggleAll('meldList'));
+
+$('dispoSearch').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase().trim();
+  $('dispoList').querySelectorAll('.check-item').forEach(el => el.classList.toggle('hidden', q && !el.dataset.name.includes(q)));
+  syncToggleLabel('dispoList');
+});
+
+let searchTimer;
+$('searchInput').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(applyFilters, 150); });
+
+$('dateFrom').addEventListener('change', () => { markPreset(null); applyFilters(); });
+$('dateTo').addEventListener('change',   () => { markPreset(null); applyFilters(); });
+
+$('datePresets').addEventListener('click', e => {
+  const btn = e.target.closest('[data-preset]');
+  if (!btn || !state.rows.length) return;
+  const p = btn.dataset.preset;
+  const ref = state.stichtag;
+  if (p === 'all')          setDateRange(state.dateMin, state.dateMax);
+  else if (p === 'overdue') setDateRange(state.dateMin, addDays(ref, -1));
+  else                      setDateRange(ref, addDays(ref, +p));
+  markPreset(p);
+  applyFilters();
+});
+
+function markPreset(p) {
+  $('datePresets').querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.preset === p));
+}
+
+function setDateRange(from, to) {
+  $('dateFrom').value = from ? toInputDate(from) : '';
+  $('dateTo').value   = to   ? toInputDate(to)   : '';
+}
+
+/* Währungsumschaltung: Hauswährung (alle) oder eine Bestellwährung (nur deren Bestellungen) */
+function buildCurrencyChips() {
+  const curs = state.hasOrigValues
+    ? countBy(state.rows, r => r.waehrung).filter(c => c.name)
+        .map(c => ({ ...c, val: sum(state.rows.filter(r => r.waehrung === c.name), r => r.betragHW) }))
+        .sort((a, b) => b.val - a.val)
+    : [];
+  $('currencyChips').innerHTML =
+    `<button class="chip" data-cur="HW">${escHtml(t('cur.hw', { c: state.hw }))}</button>` +
+    curs.map(c => `<button class="chip" data-cur="${escHtml(c.name)}" title="${escHtml(t('cur.chipTip', { n: fmtInt(c.count), c: c.name }))}">${escHtml(c.name)}</button>`).join('');
+  markCurrency();
+}
+
+function markCurrency() {
+  $('currencyChips').querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.cur === state.curMode));
+  $('currencyHint').textContent = !state.rows.length ? '' : state.curMode === 'HW'
+    ? t('cur.hwHint', { c: state.hw })
+    : t('cur.origHint', { c: state.curMode });
+}
+
+$('currencyChips').addEventListener('click', e => {
+  const btn = e.target.closest('[data-cur]');
+  if (!btn || !state.rows.length) return;
+  state.curMode = btn.dataset.cur;
+  markCurrency();
+  applyFilters();
+});
+
+$('resetBtn').addEventListener('click', () => {
+  if (!state.rows.length) return;
+  ['dispoList', 'meldList'].forEach(id => {
+    $(id).querySelectorAll('.check-item').forEach(el => el.classList.remove('hidden'));
+    $(id).querySelectorAll('input').forEach(c => c.checked = true);
+    syncToggleLabel(id);
+  });
+  $('dispoSearch').value = '';
+  $('searchInput').value = '';
+  state.curMode = 'HW';
+  markCurrency();
+  setDateRange(state.dateMin, state.dateMax);
+  markPreset('all');
+  applyFilters();
+});
+
+/* ═══════════════════════════════════════════════════
+   FILTERN
+═══════════════════════════════════════════════════ */
+function applyFilters() {
+  if (!state.rows.length) return;
+  const dispos = selectedNames('dispoList', state.dispos);
+  const melds  = selectedNames('meldList', state.meldungen);
+  const from   = fromInputDate($('dateFrom').value);
+  const to     = fromInputDate($('dateTo').value);
+  const q      = $('searchInput').value.toLowerCase().trim();
+  const hw     = state.curMode === 'HW';
+  const ref    = state.stichtag;
+  const in7    = addDays(ref, 7);
+
+  state.filtered = state.rows.filter(r => {
+    if (!hw && r.waehrung !== state.curMode) return false;
+    if (!dispos.has(r.dispo)) return false;
+    if (!melds.has(r.meldung)) return false;
+    if (r.lieferdatum) {
+      if (from && r.lieferdatum < from) return false;
+      if (to   && r.lieferdatum > to)   return false;
+    }
+    if (q) {
+      const hay = (r.lieferant + ' ' + r.kreditor + ' ' + r.material + ' ' + r.kurztext + ' ' + r.beleg + ' ' + r.ab + ' ' + r.hersteller + ' ' + r.mpn).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  state.filtered.forEach(r => {
+    r.val = hw ? r.betragHW : r.betragOrig;
+    r.status = !r.lieferdatum ? 'ok' : r.lieferdatum < ref ? 'overdue' : r.lieferdatum <= in7 ? 'soon' : 'ok';
+  });
+
+  renderSummary(dispos, melds, q);
+  render();
+}
+
+function renderSummary(dispos, melds, q) {
+  const parts = [t('sum.rows', { n: fmtInt(state.filtered.length), t: fmtInt(state.rows.length) })];
+  if (state.curMode !== 'HW')              parts.push(escHtml(t('sum.cur', { c: state.curMode })));
+  if (dispos.size < state.dispos.length)   parts.push(t('sum.dispo', { a: dispos.size, b: state.dispos.length }));
+  if (melds.size < state.meldungen.length) parts.push(t('sum.meld', { a: melds.size, b: state.meldungen.length }));
+  if (q) parts.push(escHtml(t('sum.search', { q })));
+  $('filterSummary').innerHTML = parts.join(' · ');
+}
+
+/* ═══════════════════════════════════════════════════
+   VIEWS
+═══════════════════════════════════════════════════ */
+$('viewTabs').addEventListener('click', e => {
+  const btn = e.target.closest('[data-view]');
+  if (!btn) return;
+  state.view = btn.dataset.view;
+  $('viewTabs').querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== 'view-' + state.view);
+  render();
+});
+
+function render() {
+  if (!state.rows.length) return;
+  if (state.view === 'overview')      renderOverview();
+  else if (state.view === 'actions')  renderActions();
+  else if (state.view === 'payments') renderPayments();
+  else if (state.view === 'material') renderMaterial();
+}
+
+/* ═══════════════════════════════════════════════════
+   ÜBERSICHT
+═══════════════════════════════════════════════════ */
+function renderOverview() {
+  renderKPIs();
+  renderMonthChart();
+  renderAB();
+  renderMeldChart();
+  renderSupplierChart();
+  tables.ampel.render();
+}
+
+function renderKPIs() {
+  const rows  = state.filtered;
+  const total = sum(rows, r => r.val);
+  const keys  = new Set(rows.map(r => r.key));
+  const belege = new Set(rows.map(r => r.beleg));
+  const overdueRows = rows.filter(r => r.status === 'overdue');
+  const overdueVal  = sum(overdueRows, r => r.val);
+  const noABKeys  = positionsWithoutAB(rows);
+  const suppliers = new Set(rows.map(r => r.kreditor || r.lieferant));
+
+  setKpi('kpiTotal', fmtCompact(total), cur(), fmtMoney(total) + ' ' + cur());
+  $('kpiTotalSub').textContent = t('kpi.rowsSub', { n: fmtInt(rows.length) });
+  setKpi('kpiPos', fmtInt(keys.size));
+  $('kpiPosSub').textContent = t('kpi.posSub', { n: fmtInt(belege.size) });
+  setKpi('kpiOverdue', fmtCompact(overdueVal), cur(), fmtMoney(overdueVal) + ' ' + cur());
+  $('kpiOverdueSub').textContent = t('kpi.overdueSub', { n: fmtInt(new Set(overdueRows.map(r => r.key)).size), p: pct(overdueVal, total) });
+  setKpi('kpiNoAB', fmtInt(noABKeys.size));
+  $('kpiNoABSub').textContent = t('kpi.noabSub', { p: pct(noABKeys.size, keys.size) });
+  setKpi('kpiSup', fmtInt(suppliers.size));
+}
+
+function setKpi(id, value, unit, title) {
+  const el = $(id);
+  el.innerHTML = escHtml(value) + (unit ? `<span class="kpi-unit">${escHtml(unit)}</span>` : '');
+  el.title = title || '';
+}
+
+/** Position gilt als "ohne AB", wenn keine ihrer Einteilungen eine AB trägt */
+function positionsWithoutAB(rows) {
+  const hasAB = new Map();
+  rows.forEach(r => hasAB.set(r.key, (hasAB.get(r.key) || false) || !!r.ab));
+  return new Set([...hasAB].filter(([, v]) => !v).map(([k]) => k));
+}
+
+function renderAB() {
+  const rows    = state.filtered;
+  const allKeys = new Set(rows.map(r => r.key));
+  const noAB    = positionsWithoutAB(rows);
+  const yes     = allKeys.size - noAB.size;
+  const valNo   = sum(rows.filter(r => noAB.has(r.key)), r => r.val);
+  const valYes  = sum(rows, r => r.val) - valNo;
+  const share   = allKeys.size ? yes / allKeys.size : 0;
+
+  $('abPct').textContent = allKeys.size ? Math.round(share * 100) + ' %' : '—';
+  $('abMeter').style.width = (share * 100).toFixed(1) + '%';
+  $('abYes').textContent    = fmtInt(yes);
+  $('abNo').textContent     = fmtInt(noAB.size);
+  $('abYesVal').textContent = fmtCompact(valYes) + ' ' + cur();
+  $('abNoVal').textContent  = fmtCompact(valNo) + ' ' + cur();
+
+  const limit = addDays(state.stichtag, 14);
+  const critical = new Set(rows.filter(r => noAB.has(r.key) && r.lieferdatum && r.lieferdatum <= limit).map(r => r.key));
+  $('abNote').innerHTML = critical.size ? t('ab.note', { n: fmtInt(critical.size) }) : t('ab.noteNone');
+}
+
+function renderMonthChart() {
+  const s = monthSeries(state.filtered, r => r.lieferdatum, r => r.status === 'overdue', r => r.val);
+  $('monthSub').textContent = s.labels.length
+    ? t('month.sub', { v: fmtMoney(s.total) + ' ' + cur(), later: s.laterNote })
+    : t('noData');
+  stackedMonthChart('monthChart', s, t('leg.overdue'), t('leg.open'));
+}
+
+function renderMeldChart() {
+  const agg = new Map(state.meldungen.map(m => [m.name, { val: 0, n: 0 }]));
+  state.filtered.forEach(r => { const a = agg.get(r.meldung); a.val += r.val; a.n++; });
+  const items = state.meldungen.map(m => ({ name: m.name, ...agg.get(m.name) }));
+  hBarChart('meldChart', items.map(i => ({ label: meldShort(i.name), title: meldLabel(i.name), val: i.val, extra: t('tip.rows', { n: fmtInt(i.n) }) })),
+    i => soloMeldung(items[i].name));
+}
+
+/** Klick auf Meldung: nur diese anzeigen – erneuter Klick hebt den Filter auf */
+function soloMeldung(name) {
+  const boxes = [...$('meldList').querySelectorAll('input')];
+  const idx   = state.meldungen.findIndex(m => m.name === name);
+  const isSolo = boxes.every((c, i) => c.checked === (i === idx));
+  boxes.forEach((c, i) => c.checked = isSolo ? true : i === idx);
+  syncToggleLabel('meldList');
+  applyFilters();
+}
+
+function renderSupplierChart() {
+  const tot = sum(state.filtered, r => r.val);
+  const top = topBy(state.filtered, r => r.lieferant, 10);
+  $('supSub').textContent = top.length ? t('sup.sub', { p: pct(top.reduce((s, x) => s + x.val, 0), tot) }) : t('noData');
+  hBarChart('supChart', top.map(x => ({ label: truncate(x.name, 30), title: x.name, val: x.val, extra: t('tip.share', { p: pct(x.val, tot), n: fmtInt(x.pos) }) })),
+    i => setSearch(top[i].name));
+}
+
+/* ═══════════════════════════════════════════════════
+   MASSNAHMEN
+═══════════════════════════════════════════════════ */
+function actionRows(key) { return state.filtered.filter(r => r.meldung === key); }
+
+function renderActions() {
+  $('actionTiles').innerHTML = ACTIONS.map(a => {
+    const rows = actionRows(a.key);
+    const val  = sum(rows, r => r.val);
+    let sub = t('act.tilePos', { n: fmtInt(new Set(rows.map(r => r.key)).size) });
+    if (a.key === '10' || a.key === '15') {
+      const d = rows.filter(r => r.diff !== null).map(r => r.diff).sort((x, y) => x - y);
+      if (d.length) sub += t('act.tileMedian', { d: fmtSigned(d[Math.floor(d.length / 2)]) });
+    } else if (a.key === '20') {
+      sub += t('act.tileExcess', { n: fmtInt(rows.filter(r => r.excess > 0).length) });
+    }
+    return `<button class="kpi ${a.color} ${state.action === a.key ? 'selected' : ''}" data-action="${a.key}">
+      <div class="kpi-label">${escHtml(meldShort(a.key))}</div>
+      <div class="kpi-value" title="${fmtMoney(val)} ${escHtml(cur())}">${escHtml(fmtCompact(val))}<span class="kpi-unit">${escHtml(cur())}</span></div>
+      <div class="kpi-sub">${escHtml(sub)}</div>
+    </button>`;
+  }).join('');
+
+  const key  = state.action;
+  const rows = actionRows(key);
+  const tot  = sum(rows, r => r.val);
+  const top  = topBy(rows, r => r.lieferant, 10);
+
+  $('actTitle').textContent = t('act.chartTitle', { a: meldShort(key) });
+  $('actSub').textContent = rows.length
+    ? t('act.sub', { v: fmtMoney(tot) + ' ' + cur(), n: fmtInt(new Set(rows.map(r => r.lieferant)).size) })
+    : (state.meldungen.some(m => m.name === key) ? t('act.noneFilter') : t('act.noneFile'));
+  $('actHelp').innerHTML = t(`act.${key}.help`);
+  $('actTableTitle').textContent = t('act.tableTitle', { a: meldShort(key) });
+
+  hBarChart('actChart', top.map(x => ({ label: truncate(x.name, 30), title: x.name, val: x.val, extra: t('tip.share', { p: pct(x.val, tot), n: fmtInt(x.pos) }) })),
+    i => setSearch(top[i].name));
+  tables.actions.render();
+}
+
+$('actionTiles').addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  state.action = btn.dataset.action;
+  // sinnvolle Standardsortierung je Massnahme
+  const SORT = { '10': ['diff', 1], '15': ['val', -1], '20': ['excess', -1], '07': ['lieferdatum', 1] };
+  tables.actions.setSort(...SORT[state.action]);
+  renderActions();
+});
+
+/* ═══════════════════════════════════════════════════
+   ZAHLUNGEN & KONDITIONEN
+═══════════════════════════════════════════════════ */
+$('skontoToggle').addEventListener('change', () => renderPayments());
+
+function renderPayments() {
+  const skonto = $('skontoToggle').checked;
+  const ref = state.stichtag;
+  const pays = state.filtered.map(r => ({ r, ...paymentOf(r, skonto) }));
+
+  const inDays = p => Math.round((p.due - ref) / 86400000);
+  const b1 = pays.filter(p => inDays(p) <= 30), b2 = pays.filter(p => inDays(p) > 30 && inDays(p) <= 90), b3 = pays.filter(p => inDays(p) > 90);
+  const kv = (id, list) => {
+    const v = sum(list, p => p.amount);
+    setKpi(id, fmtCompact(v), cur(), fmtMoney(v) + ' ' + cur());
+    const late = list.filter(p => p.late);
+    $(id + 'Sub').textContent = t('pay.kSub', { n: fmtInt(list.length) }) + (late.length ? t('pay.kSubLate', { v: fmtCompact(sum(late, p => p.amount)) }) : '');
+  };
+  kv('payK1', b1); kv('payK2', b2); kv('payK3', b3);
+
+  const skRows = state.filtered.filter(r => r.term.tiers.length);
+  const skPot  = sum(skRows, r => r.val * r.term.tiers[0].pct / 100);
+  setKpi('payK4', fmtCompact(skPot), cur(), fmtMoney(skPot) + ' ' + cur());
+  $('payK4Sub').textContent = t('pay.k4Sub', { n: fmtInt(skRows.length), p: pct(sum(skRows, r => r.val), sum(state.filtered, r => r.val)) });
+
+  const nonPre = state.filtered.filter(r => !r.term.prepay);
+  const totVal = sum(nonPre, r => r.val);
+  const avg = totVal ? sum(nonPre, r => r.val * r.term.net) / totVal : 0;
+  setKpi('payK5', fmtInt(avg), t('pay.days'));
+
+  const s = monthSeries(pays, p => p.due, p => p.late, p => p.amount);
+  const prepay = sum(pays.filter(p => p.r.term.prepay), p => p.amount);
+  $('paySub').textContent = s.labels.length
+    ? t('pay.sub', { v: fmtMoney(s.total) + ' ' + cur(), mode: skonto ? t('pay.withSkonto') : t('pay.net'), later: s.laterNote }) +
+      (prepay ? t('pay.prepay', { v: fmtCompact(prepay) }) : '')
+    : t('noData');
+  stackedMonthChart('payChart', s, t('leg.payLate'), t('leg.payOn'));
+
+  tables.terms.render();
+  renderIncoChart();
+}
+
+function termRows() {
+  const map = new Map();
+  state.filtered.forEach(r => {
+    const k = r.zbed || '—';
+    const a = map.get(k) || { code: k, term: r.term, val: 0, n: 0, pos: new Set() };
+    a.val += r.val; a.n++; a.pos.add(r.key);
+    map.set(k, a);
+  });
+  const tot = sum(state.filtered, r => r.val);
+  return [...map.values()].map(a => ({ ...a, share: tot ? a.val / tot : 0 }));
+}
+
+function renderIncoChart() {
+  const top = topBy(state.filtered, r => r.inco, 12);
+  const tot = sum(state.filtered, r => r.val);
+  hBarChart('incoChart', top.map(x => ({ label: x.name, title: `${x.name} – ${INCOTERM_TEXT[lang][x.name] || t('inco.noText')}`, val: x.val,
+    extra: t('tip.share', { p: pct(x.val, tot), n: fmtInt(x.pos) }) })));
+}
+
+/* ═══════════════════════════════════════════════════
+   MATERIAL & HERSTELLER
+═══════════════════════════════════════════════════ */
+function materialRows() {
+  const map = new Map();
+  state.filtered.forEach(r => {
+    const k = r.material || r.kurztext;
+    let a = map.get(k);
+    if (!a) {
+      a = { material: r.material, kurztext: r.kurztext, hersteller: r.hersteller, mpn: r.mpn, abc: r.abc, me: r.me,
+            lieferanten: new Set(), pos: new Set(), menge: 0, val: 0, next: null, overdueVal: 0 };
+      map.set(k, a);
+    }
+    a.lieferanten.add(r.lieferant);
+    a.pos.add(r.key);
+    a.menge += r.menge;
+    a.val += r.val;
+    if (r.status === 'overdue') a.overdueVal += r.val;
+    if (r.lieferdatum && (!a.next || r.lieferdatum < a.next)) a.next = r.lieferdatum;
+    if (!a.hersteller && r.hersteller) a.hersteller = r.hersteller;
+    if (!a.mpn && r.mpn) a.mpn = r.mpn;
+  });
+  return [...map.values()];
+}
+
+function renderMaterial() {
+  const tot = sum(state.filtered, r => r.val);
+  const mfr = topBy(state.filtered.filter(r => r.hersteller), r => r.hersteller, 10);
+  const mfrCount = new Set(state.filtered.map(r => r.hersteller).filter(Boolean)).size;
+  const noMfr = sum(state.filtered.filter(r => !r.hersteller), r => r.val);
+  $('mfrSub').textContent = mfr.length
+    ? t('mfr.sub', { n: fmtInt(mfrCount), p: pct(mfr.reduce((s, x) => s + x.val, 0), tot), none: noMfr ? t('mfr.noneVal', { v: fmtCompact(noMfr) }) : '' })
+    : t('mfr.empty');
+  hBarChart('mfrChart', mfr.map(x => ({ label: truncate(x.name, 28), title: x.name, val: x.val, extra: t('tip.share', { p: pct(x.val, tot), n: fmtInt(x.pos) }) })),
+    i => setSearch(mfr[i].name));
+
+  const mats = materialRows().sort((a, b) => b.val - a.val);
+  const top  = mats.slice(0, 10);
+  $('matSub').textContent = mats.length ? t('mat.sub', { n: fmtInt(mats.length), p: pct(top.reduce((s, m) => s + m.val, 0), tot) }) : t('noData');
+  hBarChart('matChart', top.map(m => ({ label: truncate(m.material + ' · ' + m.kurztext, 30), title: `${m.material} – ${m.kurztext}`, val: m.val,
+    extra: `${m.hersteller || t('mat.noMfr')} · ${t('act.tilePos', { n: fmtInt(m.pos.size) })}` })),
+    i => setSearch(top[i].material || top[i].kurztext));
+
+  tables.material.render();
+}
+
+/* ═══════════════════════════════════════════════════
+   TABELLEN (generisch: sortierbar, Limit, Excel-Export)
+═══════════════════════════════════════════════════ */
+function DataTable(cfg) {
+  const tb = { sortKey: cfg.sort.key, sortDir: cfg.sort.dir };
+  const head = $(cfg.id + 'Head'), body = $(cfg.id + 'Body'), foot = $(cfg.id + 'Foot');
+  const cols = () => (typeof cfg.columns === 'function' ? cfg.columns() : cfg.columns);
+  const txt  = v => typeof v === 'function' ? v() : v;
+
+  head.addEventListener('click', e => {
+    const th = e.target.closest('th');
+    const c  = th && cols().find(x => x.key === th.dataset.key);
+    if (!c || !c.sort) return;
+    if (tb.sortKey === c.key) tb.sortDir *= -1;
+    else { tb.sortKey = c.key; tb.sortDir = c.num ? -1 : 1; }
+    tb.render();
+  });
+
+  tb.setSort = (key, dir) => { tb.sortKey = key; tb.sortDir = dir; };
+
+  tb.rows = () => {
+    const cs = cols();
+    let c = cs.find(x => x.key === tb.sortKey && x.sort);
+    if (!c) { c = cs.find(x => x.sort); tb.sortKey = c.key; }
+    return cfg.getRows().slice().sort((a, b) => {
+      const va = c.sort(a), vb = c.sort(b);
+      return (va < vb ? -1 : va > vb ? 1 : 0) * tb.sortDir;
+    });
+  };
+
+  tb.render = () => {
+    const cs = cols();
+    head.innerHTML = cs.map(c => {
+      const arrow = tb.sortKey === c.key ? `<span class="sort">${tb.sortDir === 1 ? '▲' : '▼'}</span>` : '';
+      const tip = c.tip ? ` title="${escHtml(txt(c.tip))}"` : '';
+      return `<th data-key="${c.key}" class="${c.num ? 'num' : ''} ${c.sort ? 'sortable' : ''}"${tip}>${escHtml(txt(c.label))}${arrow}</th>`;
+    }).join('');
+    const all  = tb.rows();
+    const rows = all.slice(0, cfg.limit || TABLE_LIMIT);
+    body.innerHTML = rows.length
+      ? rows.map(r => '<tr>' + cs.map(c => `<td class="${c.cls || (c.num ? 'num' : '')}">${c.html(r)}</td>`).join('') + '</tr>').join('')
+      : `<tr><td class="empty" colspan="${cs.length}">${escHtml(txt(cfg.empty) || t('tbl.empty'))}</td></tr>`;
+    const more = all.length > rows.length ? t('tbl.more', { a: fmtInt(rows.length), b: fmtInt(all.length) }) : '';
+    foot.textContent = more + (cfg.footer ? cfg.footer(all) : t('tbl.rows', { n: fmtInt(all.length) }));
+  };
+
+  tb.export = () => {
+    const rows = tb.rows();
+    if (!rows.length) return;
+    const specs = cols().flatMap(c => c.exp ? (Array.isArray(c.exp) ? c.exp : [c.exp]) : []);
+    writeXlsx(t(cfg.file), t(cfg.sheet), specs, rows, cfg.rowFill);
+  };
+
+  return tb;
+}
+
+/* Spalten-Bausteine (Labels als Funktionen → sprachabhängig) */
+const STATUS_FILL = { overdue: 'FCE4EC', soon: 'FFF3E0', ok: null };
+const statusText  = s => t('status.' + s);
+
+const colStatus = () => ({
+  key: 'status', label: () => t('col.status'), sort: r => r.lieferdatum ? r.lieferdatum.getTime() : Infinity,
+  html: r => `<span class="status ${r.status}">● ${escHtml(statusText(r.status))}</span>`,
+  exp: { h: () => t('col.status'), v: r => statusText(r.status), w: 12 },
+});
+const colBestellung = () => ({
+  key: 'bestellung', label: () => t('col.order'), cls: 'mono',
+  sort: r => r.beleg + '-' + r.pos.padStart(5, '0') + '-' + r.eint.padStart(4, '0'),
+  html: r => `${escHtml(r.beleg)}/${escHtml(r.pos)}${r.eint ? `<span class="sub-id"> · ${escHtml(r.eint)}</span>` : ''}`,
+  exp: [{ h: () => t('col.beleg'), v: r => r.beleg, w: 13 }, { h: () => t('col.pos'), v: r => r.pos, w: 9 }, { h: () => t('col.eint'), v: r => r.eint, w: 10 }],
+});
+const colLieferdatum = (labelKey = 'col.delivery') => ({
+  key: 'lieferdatum', label: () => t(labelKey), cls: 'mono', sort: r => r.lieferdatum ? r.lieferdatum.getTime() : Infinity,
+  html: r => `<span class="${r.status === 'overdue' ? 'late' : ''}">${fmtDate(r.lieferdatum)}</span>`,
+  exp: { h: () => t(labelKey), v: r => r.lieferdatum, t: 'd', w: 12 },
+});
+const colText = (key, labelKey, field, cls, w) => ({
+  key, label: () => t(labelKey), cls, sort: r => String(r[field]).toLowerCase(),
+  html: r => cls && cls.includes('trunc') ? `<span title="${escHtml(r[field])}">${escHtml(r[field])}</span>` : escHtml(r[field] || '–'),
+  exp: { h: () => t(labelKey), v: r => r[field], w },
+});
+const colAB = () => ({
+  key: 'ab', label: () => t('col.ab'), sort: r => r.ab ? 1 : 0,
+  html: r => r.ab ? `<span class="ab-yes" title="${escHtml(r.ab)}">✓ ${escHtml(truncate(r.ab, 16))}</span>` : `<span class="ab-no">${escHtml(t('ab.missing'))}</span>`,
+  exp: { h: () => t('col.abLong'), v: r => r.ab, w: 22 },
+});
+const colValue = (labelKey = 'col.value') => ({
+  key: 'val', label: () => t(labelKey, { c: cur() }), num: true, sort: r => r.val,
+  html: r => fmtMoney(r.val),
+  exp: { h: () => t(labelKey, { c: cur() }), v: r => r.val, t: 'n', z: '#,##0.00', w: 14 },
+});
+const colQty = () => ({
+  key: 'menge', label: () => t('col.qty'), num: true, sort: r => r.menge,
+  html: r => `${fmtInt(r.menge)} <span class="sub-id">${escHtml(r.me)}</span>`,
+  exp: [{ h: () => t('col.qty'), v: r => r.menge, t: 'n', z: '#,##0', w: 12 }, { h: () => t('col.unit'), v: r => r.me, w: 6 }],
+});
+const rowsFooter = rows => t('tbl.rowsSum', { n: fmtInt(rows.length), v: fmtMoney(sum(rows, r => r.val)) + ' ' + cur() });
+
+const tables = {
+  ampel: DataTable({
+    id: 'ampel', file: 'file.ampel', sheet: 'sheet.ampel',
+    sort: { key: 'lieferdatum', dir: 1 },
+    getRows: () => state.filtered.filter(r => state.ampelStatus === 'all' || r.status === state.ampelStatus),
+    rowFill: r => STATUS_FILL[r.status],
+    columns: [
+      colStatus(), colLieferdatum(), colBestellung(),
+      colText('lieferant', 'col.supplier', 'lieferant', 'trunc', 34),
+      colText('material', 'col.material', 'material', 'mono', 12),
+      colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
+      colText('dispo', 'col.dispo', 'dispo', 'muted', 16),
+      colAB(),
+      { key: 'meldung', label: () => t('col.meld'), cls: 'muted', sort: r => meldShort(r.meldung),
+        html: r => r.meldung === NO_MELDUNG ? '–' : escHtml(meldShort(r.meldung)),
+        exp: { h: () => t('col.meld'), v: r => r.meldung === NO_MELDUNG ? '' : meldLabel(r.meldung), w: 24 } },
+      colValue('col.amount'),
+    ],
+    footer: rowsFooter,
+    empty: () => t('tbl.emptyRows'),
+  }),
+
+  actions: DataTable({
+    id: 'actions', file: 'file.actions', sheet: 'sheet.actions',
+    sort: { key: 'diff', dir: 1 },
+    getRows: () => actionRows(state.action),
+    rowFill: r => STATUS_FILL[r.status],
+    columns: () => {
+      const a = state.action;
+      const cols = [
+        colBestellung(),
+        colText('lieferant', 'col.supplier', 'lieferant', 'trunc', 34),
+        colText('material', 'col.material', 'material', 'mono', 12),
+        colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
+        colText('dispo', 'col.dispo', 'dispo', 'muted', 16),
+        colLieferdatum('col.deliveryDate'),
+      ];
+      if (a === '10' || a === '15') {
+        cols.push(
+          { key: 'umterm', label: () => t('col.newDate'), cls: 'mono', tip: () => t('col.newDateTip'), sort: r => r.umterm ? r.umterm.getTime() : Infinity,
+            html: r => fmtDate(r.umterm), exp: { h: () => t('col.newDate'), v: r => r.umterm, t: 'd', w: 14 } },
+          { key: 'diff', label: () => t('col.diff'), num: true, tip: () => t('col.diffTip'), sort: r => r.diff ?? Infinity,
+            html: r => r.diff === null ? '–' : `<span class="${r.diff < 0 ? 'late' : 'pos'}">${fmtSigned(r.diff)}</span>`,
+            exp: { h: () => t('col.diffLong'), v: r => r.diff, t: 'n', z: '0', w: 10 } });
+      }
+      if (a === '07') {
+        cols.push({ key: 'since', label: () => t('col.since'), num: true, sort: r => r.lieferdatum ? -r.lieferdatum.getTime() : -Infinity,
+          html: r => r.lieferdatum ? `<span class="late">${fmtInt(daysBetween(r.lieferdatum, state.stichtag))}</span>` : '–',
+          exp: { h: () => t('col.since'), v: r => r.lieferdatum ? daysBetween(r.lieferdatum, state.stichtag) : null, t: 'n', z: '0', w: 10 } });
+      }
+      cols.push(colQty());
+      if (a === '20') {
+        cols.push({ key: 'excess', label: () => t('col.excess', { c: state.hw }), num: true, tip: () => t('col.excessTip'),
+          sort: r => r.excess, html: r => r.excess ? fmtMoney(r.excess) : '–',
+          exp: { h: () => t('col.excess', { c: state.hw }), v: r => r.excess, t: 'n', z: '#,##0.00', w: 14 } });
+      }
+      cols.push(colAB(), colValue());
+      return cols;
+    },
+    footer: rowsFooter,
+    empty: () => t('act.empty'),
+  }),
+
+  terms: DataTable({
+    id: 'terms', file: 'file.terms', sheet: 'sheet.terms',
+    sort: { key: 'val', dir: -1 }, limit: 500,
+    getRows: termRows,
+    columns: [
+      { key: 'code', label: () => t('col.zbed'), cls: 'mono', sort: r => r.code, html: r => escHtml(r.code), exp: { h: () => t('col.zbedLong'), v: r => r.code, w: 10 } },
+      { key: 'text', label: () => t('col.termText'), cls: 'wrap muted', sort: r => termText(r.term),
+        html: r => escHtml(termText(r.term) || t('terms.notInTable')), exp: { h: () => t('col.termText'), v: r => termText(r.term), w: 46 } },
+      { key: 'net', label: () => t('col.net'), num: true, sort: r => r.term.prepay ? -1 : r.term.net,
+        html: r => r.term.prepay ? escHtml(t('terms.prepay')) : t('terms.daysShort', { d: fmtInt(r.term.net) }),
+        exp: { h: () => t('col.netLong'), v: r => r.term.prepay ? null : r.term.net, t: 'n', z: '0', w: 10 } },
+      { key: 'skonto', label: () => t('col.skonto'), sort: r => r.term.tiers.length ? r.term.tiers[0].pct : 0,
+        html: r => r.term.tiers.length ? r.term.tiers.map(x => `${t('terms.daysShort', { d: x.days })} ${fmtPct(x.pct)}`).join(' / ') : '–',
+        exp: { h: () => t('col.skonto'), v: r => r.term.tiers.map(x => `${t('terms.daysShort', { d: x.days })} ${fmtPct(x.pct)}`).join(' / '), w: 18 } },
+      { key: 'basis', label: () => t('col.basis'), cls: 'muted', sort: r => termBasis(r.term), html: r => escHtml(termBasis(r.term)),
+        exp: { h: () => t('col.basis'), v: r => termBasis(r.term), w: 14 } },
+      { key: 'n', label: () => t('col.positions'), num: true, sort: r => r.pos.size, html: r => fmtInt(r.pos.size),
+        exp: { h: () => t('col.positions'), v: r => r.pos.size, t: 'n', z: '#,##0', w: 11 } },
+      colValue(),
+      { key: 'share', label: () => t('col.share'), num: true, sort: r => r.share,
+        html: r => `<div class="share">${fmtNum(r.share * 100, 1)} %<span class="bar"><i style="width:${Math.min(100, r.share * 100).toFixed(1)}%"></i></span></div>`,
+        exp: { h: () => t('col.share'), v: r => r.share, t: 'n', z: '0.0%', w: 9 } },
+    ],
+    footer: rows => t('terms.foot', { n: fmtInt(rows.length), v: fmtMoney(sum(rows, r => r.val)) + ' ' + cur() }),
+  }),
+
+  material: DataTable({
+    id: 'material', file: 'file.material', sheet: 'sheet.material',
+    sort: { key: 'val', dir: -1 },
+    getRows: materialRows,
+    columns: [
+      colText('material', 'col.material', 'material', 'mono', 12),
+      colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
+      colText('hersteller', 'col.mfr', 'hersteller', 'trunc', 26),
+      colText('mpn', 'col.mpn', 'mpn', 'trunc mono', 24),
+      { key: 'lief', label: () => t('col.supplier'), cls: 'trunc', sort: r => r.lieferanten.size === 1 ? [...r.lieferanten][0].toLowerCase() : '~' + r.lieferanten.size,
+        html: r => r.lieferanten.size === 1 ? `<span title="${escHtml([...r.lieferanten][0])}">${escHtml([...r.lieferanten][0])}</span>`
+                                            : `<span class="pos" title="${escHtml([...r.lieferanten].join(', '))}">${escHtml(t('mat.nSuppliers', { n: r.lieferanten.size }))}</span>`,
+        exp: { h: () => t('col.suppliers'), v: r => [...r.lieferanten].join(', '), w: 34 } },
+      colText('abc', 'col.abc', 'abc', 'muted', 6),
+      { key: 'pos', label: () => t('col.positions'), num: true, sort: r => r.pos.size, html: r => fmtInt(r.pos.size),
+        exp: { h: () => t('col.positions'), v: r => r.pos.size, t: 'n', z: '#,##0', w: 11 } },
+      colQty(),
+      { key: 'next', label: () => t('col.next'), cls: 'mono', sort: r => r.next ? r.next.getTime() : Infinity,
+        html: r => `<span class="${r.next && r.next < state.stichtag ? 'late' : ''}">${fmtDate(r.next)}</span>`,
+        exp: { h: () => t('col.next'), v: r => r.next, t: 'd', w: 14 } },
+      { key: 'overdueVal', label: () => t('col.overdueVal', { c: cur() }), num: true, sort: r => r.overdueVal,
+        html: r => r.overdueVal ? `<span class="late">${fmtMoney(r.overdueVal)}</span>` : '–',
+        exp: { h: () => t('col.overdueVal', { c: cur() }), v: r => r.overdueVal, t: 'n', z: '#,##0.00', w: 16 } },
+      colValue(),
+    ],
+    footer: rows => t('mat.foot', { n: fmtInt(rows.length), v: fmtMoney(sum(rows, r => r.val)) + ' ' + cur() }),
+  }),
+};
+
+$('statusTabs').addEventListener('click', e => {
+  const btn = e.target.closest('[data-status]');
+  if (!btn) return;
+  state.ampelStatus = btn.dataset.status;
+  $('statusTabs').querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === btn));
+  tables.ampel.render();
+});
+
+document.querySelectorAll('[data-export]').forEach(btn => btn.addEventListener('click', () => tables[btn.dataset.export].export()));
+
+/* ═══════════════════════════════════════════════════
+   EXCEL-EXPORT (Farben gemäss Design-Dokument)
+═══════════════════════════════════════════════════ */
+function writeXlsx(fileBase, sheetName, specs, rows, rowFill) {
+  const font = { name: 'Arial', sz: 10 };
+  const headStyle = {
+    font: { name: 'Arial', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+    fill: { fgColor: { rgb: '2F5496' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+  };
+  const ws = {};
+  specs.forEach((s, c) => ws[XLSX.utils.encode_cell({ r: 0, c })] = { v: typeof s.h === 'function' ? s.h() : s.h, t: 's', s: headStyle });
+
+  rows.forEach((row, i) => {
+    const rgb  = rowFill ? rowFill(row) : null;
+    const fill = rgb ? { fill: { fgColor: { rgb } } } : {};
+    specs.forEach((s, c) => {
+      const v = s.v(row);
+      let cell;
+      if (s.t === 'd')      cell = v ? { v: excelSerial(v), t: 'n', z: 'dd.mm.yyyy' } : { v: '', t: 's' };
+      else if (s.t === 'n') cell = v === null || v === undefined || isNaN(v) ? { v: '', t: 's' } : { v, t: 'n', z: s.z };
+      else                  cell = { v: v === null || v === undefined ? '' : String(v), t: 's' };
+      cell.s = { font, ...fill };
+      if (cell.z) cell.s.numFmt = cell.z;
+      ws[XLSX.utils.encode_cell({ r: i + 1, c })] = cell;
+    });
+  });
+
+  const range = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: specs.length - 1 } });
+  ws['!ref'] = range;
+  ws['!autofilter'] = { ref: range };
+  ws['!cols'] = specs.map(s => ({ wch: s.w || 12 }));
+  ws['!rows'] = [{ hpt: 28 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
+  const d = state.stichtag;
+  const suffix = state.curMode === 'HW' ? '' : '_' + state.curMode;
+  XLSX.writeFile(wb, `${fileBase}${suffix}_${t('file.stichtag')}_${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}.xlsx`);
+}
+
+/* ═══════════════════════════════════════════════════
+   CHART-HELFER
+═══════════════════════════════════════════════════ */
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.font.family = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+  Chart.defaults.font.size   = 11;
+  Chart.defaults.color       = C.text2;
+}
+
+function baseOptions(o) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 250 },
+    ...o,
+    plugins: {
+      legend: { display: false },
+      ...(o.plugins || {}),
+      tooltip: {
+        backgroundColor: '#0f172a', borderColor: 'rgba(148,163,184,0.3)', borderWidth: 1,
+        titleColor: '#f8fafc', bodyColor: '#e2e8f0', footerColor: '#94a3b8',
+        padding: 10, cornerRadius: 8, boxPadding: 4,
+        ...((o.plugins && o.plugins.tooltip) || {}),
+      },
+    },
+  };
+}
+
+function upsertChart(id, config) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart($(id), config);
+}
+
+/** Monatsreihe rund um den Stichtag:
+ *  – Achse beginnt beim ersten Monat mit offenem Wert (Zeilen mit 0 zählen nicht)
+ *  – älter als 12 Monate vor Stichtag → ein Balken "Früher"
+ *  – später als 12 Monate nach Stichtag → ein Balken "Später" */
+function monthSeries(items, dateFn, isA, valFn) {
+  const ref = state.stichtag;
+  const refKey  = ref.getFullYear() * 100 + ref.getMonth();
+  const horizon = refKey + 100;          // gleicher Monat im Folgejahr
+  const start   = refKey - 100;          // gleicher Monat im Vorjahr
+  const EARLIER = -1, LATER = 999999;
+  const buckets = new Map();
+  let total = 0;
+  items.forEach(it => {
+    const d = dateFn(it);
+    const v = valFn(it);
+    if (!d || !v) return;
+    let k = d.getFullYear() * 100 + d.getMonth();
+    if (k > horizon) k = LATER;
+    else if (k < start) k = EARLIER;
+    const b = buckets.get(k) || { a: 0, b: 0 };
+    if (isA(it)) b.a += v; else b.b += v;
+    total += v;
+    buckets.set(k, b);
+  });
+  const keys = [...buckets.keys()].filter(k => k !== LATER && k !== EARLIER).sort((x, y) => x - y);
+  const months = [];
+  if (buckets.has(EARLIER)) months.push(EARLIER);
+  if (keys.length) {
+    let y = Math.floor(keys[0] / 100), m = keys[0] % 100;
+    const last = keys[keys.length - 1];
+    while (y * 100 + m <= last) { months.push(y * 100 + m); if (++m > 11) { m = 0; y++; } }
+  }
+  if (buckets.has(LATER)) months.push(LATER);
+  const M = MONTHS[lang];
+  const label = k => M[k % 100] + ' ' + Math.floor(k / 100);
+  const next  = k => k % 100 === 11 ? k + 89 : k + 1;   // Folgemonat als Schlüssel
+  return {
+    labels: months.map(k => k === LATER ? t('later') : k === EARLIER ? t('earlier') : M[k % 100] + ' ' + String(Math.floor(k / 100)).slice(2)),
+    a: months.map(k => (buckets.get(k) || {}).a || 0),
+    b: months.map(k => (buckets.get(k) || {}).b || 0),
+    total,
+    laterNote: (buckets.has(EARLIER) ? t('earlierNote', { m: label(start) }) : '') +
+               (buckets.has(LATER) ? t('laterNote', { m: label(next(horizon)) }) : ''),
+  };
+}
+
+function stackedMonthChart(id, s, labelA, labelB) {
+  const topRadius = { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 };
+  upsertChart(id, {
+    type: 'bar',
+    data: {
+      labels: s.labels,
+      datasets: [
+        { label: labelA, data: s.a, backgroundColor: C.red, stack: 's', maxBarThickness: 24, borderSkipped: false,
+          borderRadius: ctx => s.b[ctx.dataIndex] > 0 ? 0 : topRadius },
+        { label: labelB, data: s.b, backgroundColor: C.accent, stack: 's', maxBarThickness: 24, borderSkipped: false,
+          borderRadius: topRadius, borderColor: C.gap,
+          borderWidth: ctx => s.a[ctx.dataIndex] > 0 ? { bottom: 2, top: 0, left: 0, right: 0 } : 0 },
+      ],
+    },
+    options: baseOptions({
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { autoSkip: true, maxRotation: 0, color: C.text2 } },
+        y: { stacked: true, grid: { color: C.grid }, border: { display: false }, ticks: { color: C.text2, callback: v => fmtCompact(v) } },
+      },
+      plugins: {
+        tooltip: {
+          mode: 'index', intersect: false,
+          filter: item => item.parsed.y > 0,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${fmtMoney(ctx.parsed.y)} ${cur()}`,
+            footer: items => items.length > 1 ? t('total') + ': ' + fmtMoney(items.reduce((a, i) => a + i.parsed.y, 0)) + ' ' + cur() : '',
+          },
+        },
+      },
+    }),
+  });
+}
+
+/** Horizontaler Balken, eine Serie; items: {label, title, val, extra} */
+function hBarChart(id, items, onClick) {
+  upsertChart(id, {
+    type: 'bar',
+    data: {
+      labels: items.map(i => i.label),
+      datasets: [{ data: items.map(i => i.val), backgroundColor: C.accent, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 20 }],
+    },
+    options: baseOptions({
+      indexAxis: 'y',
+      onClick: onClick ? (evt, els) => { if (els.length) onClick(els[0].index); } : undefined,
+      onHover: onClick ? (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; } : undefined,
+      scales: {
+        x: { grid: { color: C.grid }, border: { display: false }, ticks: { color: C.text2, callback: v => fmtCompact(v) } },
+        y: { grid: { display: false }, ticks: { color: C.text2 } },
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: ctx => items[ctx[0].dataIndex].title,
+            label: ctx => {
+              const it = items[ctx.dataIndex];
+              return [` ${fmtMoney(it.val)} ${cur()}`].concat(it.extra ? [' ' + it.extra] : []);
+            },
+          },
+        },
+      },
+    }),
+  });
+}
+
+/** Top-N Gruppen nach Wert: [{name, val, pos}] */
+function topBy(rows, keyFn, n) {
+  const m = new Map();
+  rows.forEach(r => {
+    const k = keyFn(r);
+    const a = m.get(k) || { name: k, val: 0, keys: new Set() };
+    a.val += r.val; a.keys.add(r.key);
+    m.set(k, a);
+  });
+  return [...m.values()].sort((a, b) => b.val - a.val).slice(0, n).map(a => ({ name: a.name, val: a.val, pos: a.keys.size }));
+}
+
+function setSearch(text) {
+  $('searchInput').value = text;
+  applyFilters();
+}
+
+/* ═══════════════════════════════════════════════════
+   ALLGEMEINE HELFER
+═══════════════════════════════════════════════════ */
+/** Excel-Seriennummer, Date oder Text (dd.mm.yyyy / yyyy-mm-dd) → lokales Datum 00:00 */
+function parseDate(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') {
+    if (v < 1 || v > 2958465) return null;
+    const u = new Date(Math.round((v - 25569) * 86400000));
+    if (u.getUTCFullYear() >= 9999) return null;           // SAP "unbegrenzt"
+    return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+  }
+  if (v instanceof Date) return isNaN(v) ? null : new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  return null;
+}
+
+function toNumber(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  if (v === null || v === undefined) return 0;
+  let s = String(v).replace(/['’\s]/g, '');
+  if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s.replace(/,/g, ''));
+  return isFinite(n) ? n : 0;
+}
+
+function excelSerial(d) { return (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 86400000; }
+function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+function addDays(d, n)  { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function daysBetween(a, b) { return Math.round((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) - Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000); }
+function pad2(n)        { return String(n).padStart(2, '0'); }
+function toInputDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function fromInputDate(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function countBy(rows, fn) {
+  const m = new Map();
+  rows.forEach(r => { const k = fn(r); m.set(k, (m.get(k) || 0) + 1); });
+  return [...m].map(([name, count]) => ({ name, count }));
+}
+
+function meldRank(key) {
+  const i = MELD_ORDER.indexOf(key);
+  return i >= 0 ? i : key === NO_MELDUNG ? 999 : 500;
+}
+
+function sum(rows, fn) { return rows.reduce((s, r) => s + fn(r), 0); }
+
+const loc = () => LOCALE[lang];
+function fmtNum(n, dec)  { return n.toLocaleString(loc(), { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+function fmtInt(n)    { return Math.round(n).toLocaleString(loc()); }
+function fmtSigned(n) { return (n > 0 ? '+' : '') + fmtInt(n); }
+function fmtMoney(n)  { return fmtNum(n, 2); }
+function fmtPct(n)    { return n.toLocaleString(loc(), { maximumFractionDigits: 2 }) + ' %'; }
+function fmtCompact(n) {
+  const a = Math.abs(n);
+  if (a >= 1e6) return (n / 1e6).toLocaleString(loc(), { maximumFractionDigits: 2 }) + t('unit.mio');
+  if (a >= 1e3) return (n / 1e3).toLocaleString(loc(), { maximumFractionDigits: a >= 1e5 ? 0 : 1 }) + t('unit.tsd');
+  return n.toLocaleString(loc(), { maximumFractionDigits: 0 });
+}
+function pct(part, total) { return total ? Math.round(part / total * 100) + ' %' : '0 %'; }
+function fmtDate(d) {
+  if (!d) return '—';
+  return lang === 'de'
+    ? pad2(d.getDate()) + '.' + pad2(d.getMonth() + 1) + '.' + d.getFullYear()
+    : pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+function fmtDateTime(d) { return fmtDate(d) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function truncate(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showLoading(on) { $('loading').classList.toggle('visible', on); }
+
+/** Fehler: Titel als Schlüssel, Text als Funktion → wird beim Sprachwechsel neu übersetzt */
+function showError(titleKey, htmlFn) {
+  lastError = { titleKey, html: htmlFn };
+  const box = $('errorBox');
+  box.innerHTML = `<strong>${escHtml(t(titleKey))}</strong><br>${htmlFn()}`;
+  box.hidden = false;
+}
+function hideError() { $('errorBox').hidden = true; lastError = null; }
+
+function showWarning(featMissing) {
+  const items = [...featMissing].map(([feat, names]) =>
+    `<li>${t('warn.feature', { cols: names.map(n => `<code>${escHtml(n[lang === 'de' ? 0 : 1] || n[0])}</code>`).join(', '), feat: escHtml(t(feat)) })}</li>`);
+  $('warnBox').innerHTML = `<strong>${escHtml(t('warn.optional'))}</strong><ul>${items.join('')}</ul>`;
+  $('warnBox').hidden = false;
+}
+function hideWarning() { $('warnBox').hidden = true; lastWarning = null; }
+
+/* ═══════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════ */
+(function init() {
+  let saved = null;
+  try { saved = localStorage.getItem(LANG_KEY); } catch (e) {}
+  setLanguage(saved || 'de');
+  $('langSelect').addEventListener('change', e => setLanguage(e.target.value));
+
+  if (typeof XLSX === 'undefined' || typeof Chart === 'undefined') {
+    showError('err.lib', () => t('err.libMsg'));
+  }
+})();
+</script>
+</body>
+</html>
