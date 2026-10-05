@@ -578,9 +578,9 @@
     </div>
 
     <div class="side-section">
-      <div class="side-label"><span data-i18n="side.dispo">Disponent</span><button class="link-btn" id="dispoToggle"></button></div>
-      <input class="input" id="dispoSearch" type="search" data-i18n-ph="ph.dispo" />
-      <div class="scroll-list" id="dispoList"></div>
+      <div class="side-label"><span data-i18n="side.grp">Einkäufergruppe</span><button class="link-btn" id="grpToggle"></button></div>
+      <input class="input" id="grpSearch" type="search" data-i18n-ph="ph.grp" />
+      <div class="scroll-list" id="grpList"></div>
     </div>
 
     <div class="side-section">
@@ -810,10 +810,10 @@ const I18N = {
     'side.search': 'Suche', 'ph.search': 'Lieferant, Material, Hersteller, MPN…',
     'side.delivery': 'Lieferdatum', 'preset.all': 'Alle', 'preset.overdue': 'Überfällig', 'preset.30': 'Nächste 30 T.', 'preset.90': 'Nächste 90 T.',
     'lbl.from': 'Von', 'lbl.to': 'Bis',
-    'side.dispo': 'Disponent', 'ph.dispo': 'Disponent suchen…', 'side.meld': 'Ausnahmemeldung',
+    'side.grp': 'Einkäufergruppe', 'ph.grp': 'Einkäufergruppe suchen…', 'side.meld': 'Ausnahmemeldung',
     'btn.allOff': 'Alle ab', 'btn.allOn': 'Alle an', 'btn.reset': '↺ Filter zurücksetzen', 'btn.export': '⬇ Excel-Export',
     'sum.rows': '<strong>{n}</strong> von {t} Einteilungen', 'sum.cur': 'nur {c}-Bestellungen',
-    'sum.dispo': '{a}/{b} Disponenten', 'sum.meld': '{a}/{b} Meldungen', 'sum.search': 'Suche „{q}“',
+    'sum.grp': '{a}/{b} Einkäufergruppen', 'sum.meld': '{a}/{b} Meldungen', 'sum.search': 'Suche „{q}“',
     'empty.title': 'Noch keine Daten geladen',
     'empty.sub': 'ZBK-Export aus SAP (Excel, Deutsch oder Englisch) links in das Feld ziehen oder anklicken. Die Datei wird nur lokal im Browser verarbeitet.',
     'footer': 'Cicor Procurement Tools · Daten werden ausschliesslich lokal im Browser verarbeitet',
@@ -832,7 +832,7 @@ const I18N = {
     'warn.feature': '{cols} → {feat}',
 
     'feat.meld': 'Massnahmen & Ausnahmemeldungen', 'feat.pay': 'Zahlungsprognose & Konditionen', 'feat.orig': 'Werte in Originalwährung',
-    'feat.mfr': 'Hersteller-Auswertung', 'feat.ab': 'Auftragsbestätigungen', 'feat.dispo': 'Disponenten-Filter',
+    'feat.mfr': 'Hersteller-Auswertung', 'feat.ab': 'Auftragsbestätigungen', 'feat.grp': 'Einkäufergruppen-Filter',
     'feat.resched': 'Neuer Termin / Δ Tage', 'feat.excess': 'Überdeckung bei Storno', 'feat.inco': 'Incoterms', 'feat.qty': 'Offene Menge',
     'feat.supplier': 'Lieferanten-Auswertung', 'feat.material': 'Material-Auswertung',
 
@@ -862,7 +862,7 @@ const I18N = {
     'status.overdue': 'Überfällig', 'status.soon': '≤ 7 Tage', 'status.ok': 'Planmässig',
 
     'act.helpTitle': 'So ist die Liste zu lesen', 'act.chartAria': 'Wert je Lieferant für die gewählte Massnahme',
-    'act.tableSub': 'Eine Zeile je Einteilung · Disponent über die Sidebar wählbar · Spaltenkopf sortiert',
+    'act.tableSub': 'Eine Zeile je Einteilung · Einkäufergruppe über die Sidebar wählbar · Spaltenkopf sortiert',
     'act.chartTitle': '{a}: Top 10 Lieferanten', 'act.tableTitle': '{a} – Arbeitsliste',
     'act.sub': '{v} bei {n} Lieferanten · Balken anklicken übernimmt den Lieferanten in die Suche',
     'act.noneFilter': 'Keine Einteilungen im aktuellen Filter (Sidebar prüfen).', 'act.noneFile': 'Diese Meldung kommt in der Datei nicht vor.',
@@ -899,7 +899,7 @@ const I18N = {
 
     'col.status': 'Status', 'col.delivery': 'Lieferdatum', 'col.deliveryDate': 'Liefertermin', 'col.order': 'Bestellung',
     'col.beleg': 'Einkaufsbeleg', 'col.pos': 'Position', 'col.eint': 'Einteilung',
-    'col.supplier': 'Lieferant', 'col.material': 'Material', 'col.text': 'Kurztext', 'col.dispo': 'Disponent',
+    'col.supplier': 'Lieferant', 'col.material': 'Material', 'col.text': 'Kurztext', 'col.grp': 'Einkäufergruppe',
     'col.ab': 'AB', 'col.abLong': 'Auftragsbestätigung', 'col.meld': 'Ausnahmemeldung',
     'col.amount': 'Betrag {c}', 'col.value': 'Wert {c}',
     'col.newDate': 'Neuer Termin (SAP)', 'col.newDateTip': 'Umterminierungsdatum', 'col.diff': 'Δ Tage', 'col.diffTip': 'Neuer Termin minus Liefertermin', 'col.diffLong': 'Differenz Tage',
@@ -953,10 +953,10 @@ const I18N = {
     'side.search': 'Search', 'ph.search': 'Supplier, material, manufacturer, MPN…',
     'side.delivery': 'Delivery date', 'preset.all': 'All', 'preset.overdue': 'Overdue', 'preset.30': 'Next 30 d', 'preset.90': 'Next 90 d',
     'lbl.from': 'From', 'lbl.to': 'To',
-    'side.dispo': 'MRP controller', 'ph.dispo': 'Search MRP controller…', 'side.meld': 'Exception message',
+    'side.grp': 'Purchasing group', 'ph.grp': 'Search purchasing group…', 'side.meld': 'Exception message',
     'btn.allOff': 'Clear all', 'btn.allOn': 'Select all','btn.reset': '↺ Reset filters', 'btn.export': '⬇ Excel export',
     'sum.rows': '<strong>{n}</strong> of {t} schedule lines', 'sum.cur': 'only {c} orders',
-    'sum.dispo': '{a}/{b} MRP controllers', 'sum.meld': '{a}/{b} messages', 'sum.search': 'search “{q}”',
+    'sum.grp': '{a}/{b} purchasing groups', 'sum.meld': '{a}/{b} messages', 'sum.search': 'search “{q}”',
     'empty.title': 'No data loaded yet',
     'empty.sub': 'Drag the ZBK export from SAP (Excel, German or English) onto the field on the left or click it. The file is processed locally in your browser only.',
     'footer': 'Cicor Procurement Tools · Data is processed locally in your browser only',
@@ -975,7 +975,7 @@ const I18N = {
     'warn.feature': '{cols} → {feat}',
 
     'feat.meld': 'Actions & exception messages', 'feat.pay': 'Payment forecast & terms', 'feat.orig': 'Values in order currency',
-    'feat.mfr': 'Manufacturer analysis', 'feat.ab': 'Order acknowledgments', 'feat.dispo': 'MRP controller filter',
+    'feat.mfr': 'Manufacturer analysis', 'feat.ab': 'Order acknowledgments', 'feat.grp': 'Purchasing group filter',
     'feat.resched': 'New date / Δ days', 'feat.excess': 'Excess value for cancellations', 'feat.inco': 'Incoterms', 'feat.qty': 'Open quantity',
     'feat.supplier': 'Supplier analysis', 'feat.material': 'Material analysis',
 
@@ -1005,7 +1005,7 @@ const I18N = {
     'status.overdue': 'Overdue', 'status.soon': '≤ 7 days', 'status.ok': 'On schedule',
 
     'act.helpTitle': 'How to read this list', 'act.chartAria': 'Value per supplier for the selected action',
-    'act.tableSub': 'One row per schedule line · MRP controller selectable in the sidebar · click a header to sort',
+    'act.tableSub': 'One row per schedule line · purchasing group selectable in the sidebar · click a header to sort',
     'act.chartTitle': '{a}: top 10 suppliers', 'act.tableTitle': '{a} – work list',
     'act.sub': '{v} at {n} suppliers · click a bar to search for the supplier',
     'act.noneFilter': 'No schedule lines in the current filter (check sidebar).', 'act.noneFile': 'This message does not occur in the file.',
@@ -1042,7 +1042,7 @@ const I18N = {
 
     'col.status': 'Status', 'col.delivery': 'Delivery date', 'col.deliveryDate': 'Delivery date', 'col.order': 'Purchase order',
     'col.beleg': 'Purchasing document', 'col.pos': 'Item', 'col.eint': 'Schedule line',
-    'col.supplier': 'Supplier', 'col.material': 'Material', 'col.text': 'Short text', 'col.dispo': 'MRP controller',
+    'col.supplier': 'Supplier', 'col.material': 'Material', 'col.text': 'Short text', 'col.grp': 'Purch. group',
     'col.ab': 'OA', 'col.abLong': 'Order acknowledgment', 'col.meld': 'Exception message',
     'col.amount': 'Amount {c}', 'col.value': 'Value {c}',
     'col.newDate': 'New date (SAP)', 'col.newDateTip': 'Rescheduling date', 'col.diff': 'Δ days', 'col.diffTip': 'New date minus delivery date', 'col.diffLong': 'Difference days',
@@ -1102,7 +1102,7 @@ function setLanguage(l) {
   try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
   applyStaticTranslations();
   clearTableFilters();      // Filterwerte sind formatiert (Datum, Zahlen, Status) → sprachabhängig
-  syncToggleLabel('dispoList');
+  syncToggleLabel('grpList');
   syncToggleLabel('meldList');
   if (lastError) showError(lastError.titleKey, lastError.html);
   if (lastWarning) showWarning(lastWarning);
@@ -1232,8 +1232,8 @@ const FIELDS = {
   orig:       { names: ['Nettowert offen', 'Net Value Open'], feat: 'feat.orig' },
   waehrung:   { names: ['Währung', 'Currency'], multi: true, feat: 'feat.orig' },
   ab:         { names: ['Auftragsbestätigung', 'Order Acknowledgment'], feat: 'feat.ab' },
-  dispo:      { names: ['Name Disponent', 'MRP controller name'], feat: 'feat.dispo' },
-  dispoNr:    { names: ['Disponent', 'MRP Controller'] },
+  einkgrp:    { names: ['Name Einkäufergrp', 'Purch. Group name'], feat: 'feat.grp' },
+  einkgrpNr:  { names: ['Einkäufergruppe', 'Purchasing Group'] },
   kreditor:   { names: ['Kreditor', 'Supplier'] },
   lieferant:  { names: ['Name 1'], feat: 'feat.supplier' },
   material:   { names: ['Material'], feat: 'feat.material' },
@@ -1265,7 +1265,7 @@ const state = {
   hasOrigValues: false,
   stichtag: null, stichtagAuto: null, stichtagTs: null, stichtagManual: false,
   dateMin: null, dateMax: null,
-  dispos: [], meldungen: [],
+  grps: [], meldungen: [],
   view: 'overview',
   ampelStatus: 'all',
   action: '10',
@@ -1422,7 +1422,7 @@ function loadRows(aoa, fileName) {
     const absent = d.multi ? !H[k].length : H[k] === null;
     if (!absent || !d.feat) continue;
     if (k === 'lieferant' && H.kreditor !== null) continue;
-    if (k === 'dispo' && H.dispoNr !== null) continue;
+    if (k === 'einkgrp' && H.einkgrpNr !== null) continue;
     if (k === 'hersteller' && H.herstellerNr !== null) continue;
     if (!featMissing.has(d.feat)) featMissing.set(d.feat, []);
     featMissing.get(d.feat).push(d.names);
@@ -1463,7 +1463,7 @@ function loadRows(aoa, fileName) {
         betragOrig:  H.orig !== null ? toNumber(r[H.orig]) : 0,
         waehrung:    curCol !== null ? str(r[curCol]) : '',
         ab:          H.ab !== null ? str(r[H.ab]) : '',
-        dispo:       (H.dispo !== null && str(r[H.dispo])) || (H.dispoNr !== null && str(r[H.dispoNr])) || '—',
+        einkgrp:     (H.einkgrp !== null && str(r[H.einkgrp])) || (H.einkgrpNr !== null && str(r[H.einkgrpNr])) || '—',
         kreditor:    H.kreditor !== null ? str(r[H.kreditor]) : '',
         lieferant:   (H.lieferant !== null && str(r[H.lieferant])) || (H.kreditor !== null && str(r[H.kreditor])) || '—',
         material:    H.material !== null ? str(r[H.material]) : '',
@@ -1503,13 +1503,13 @@ function activateData(fileName) {
   state.dateMin = times.length ? new Date(times.reduce((a, b) => Math.min(a, b))) : null;
   state.dateMax = times.length ? new Date(times.reduce((a, b) => Math.max(a, b))) : null;
 
-  state.dispos   = countBy(state.rows, r => r.dispo).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  state.grps     = countBy(state.rows, r => r.einkgrp).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   state.meldungen = countBy(state.rows, r => r.meldung).sort((a, b) => meldRank(a.name) - meldRank(b.name) || a.name.localeCompare(b.name, 'de'));
 
-  buildCheckList('dispoList', state.dispos, x => x);
+  buildCheckList('grpList', state.grps, x => x);
   buildCheckList('meldList', state.meldungen, meldLabel);
   buildCurrencyChips();
-  $('dispoSearch').value = '';
+  $('grpSearch').value = '';
   $('searchInput').value = '';
   setDateRange(state.dateMin, state.dateMax);
   markPreset('all');
@@ -1542,7 +1542,7 @@ function activateData(fileName) {
    Bibliotheken → eine einzelne HTML-Datei, offline lauffähig. Das Original
    bleibt unverändert; im Report kann weiterhin Excel geladen werden.
 ═══════════════════════════════════════════════════ */
-const ROW_FIELDS  = ['beleg', 'pos', 'eint', 'lieferdatum', 'belegdatum', 'betragHW', 'betragOrig', 'waehrung', 'ab', 'dispo',
+const ROW_FIELDS  = ['beleg', 'pos', 'eint', 'lieferdatum', 'belegdatum', 'betragHW', 'betragOrig', 'waehrung', 'ab', 'einkgrp',
                      'kreditor', 'lieferant', 'material', 'kurztext', 'hersteller', 'mpn', 'abc', 'menge', 'me', 'meldung',
                      'umterm', 'diff', 'excess', 'zbed', 'term', 'inco'];
 const DATE_FIELDS = new Set(['lieferdatum', 'belegdatum', 'umterm']);
@@ -1594,6 +1594,7 @@ function loadEmbedded(p) {
       else                         r[f] = v === null || v === undefined ? '' : v;
     }
     for (const f of ['betragHW', 'betragOrig', 'menge', 'excess']) r[f] = +r[f] || 0;
+    if (idx.einkgrp === undefined && idx.dispo !== undefined) r.einkgrp = a[idx.dispo] || '—';   // Reports vor der Umstellung
     r.key = r.beleg + '-' + r.pos;
     return r;
   });
@@ -1816,7 +1817,7 @@ function selectedNames(listId, items) {
 }
 
 function syncToggleLabel(listId) {
-  const btn = $(listId === 'dispoList' ? 'dispoToggle' : 'meldToggle');
+  const btn = $(listId === 'grpList' ? 'grpToggle' : 'meldToggle');
   const boxes = [...$(listId).querySelectorAll('.check-item:not(.hidden) input')];
   btn.textContent = !boxes.length || boxes.every(c => c.checked) ? t('btn.allOff') : t('btn.allOn');
 }
@@ -1829,14 +1830,14 @@ function toggleAll(listId) {
   applyFilters();
 }
 
-['dispoList', 'meldList'].forEach(id => $(id).addEventListener('change', () => { syncToggleLabel(id); applyFilters(); }));
-$('dispoToggle').addEventListener('click', () => toggleAll('dispoList'));
-$('meldToggle').addEventListener('click',  () => toggleAll('meldList'));
+['grpList', 'meldList'].forEach(id => $(id).addEventListener('change', () => { syncToggleLabel(id); applyFilters(); }));
+$('grpToggle').addEventListener('click',  () => toggleAll('grpList'));
+$('meldToggle').addEventListener('click', () => toggleAll('meldList'));
 
-$('dispoSearch').addEventListener('input', e => {
+$('grpSearch').addEventListener('input', e => {
   const q = e.target.value.toLowerCase().trim();
-  $('dispoList').querySelectorAll('.check-item').forEach(el => el.classList.toggle('hidden', q && !el.dataset.name.includes(q)));
-  syncToggleLabel('dispoList');
+  $('grpList').querySelectorAll('.check-item').forEach(el => el.classList.toggle('hidden', q && !el.dataset.name.includes(q)));
+  syncToggleLabel('grpList');
 });
 
 let searchTimer;
@@ -1897,12 +1898,12 @@ $('currencyChips').addEventListener('click', e => {
 
 $('resetBtn').addEventListener('click', () => {
   if (!state.rows.length) return;
-  ['dispoList', 'meldList'].forEach(id => {
+  ['grpList', 'meldList'].forEach(id => {
     $(id).querySelectorAll('.check-item').forEach(el => el.classList.remove('hidden'));
     $(id).querySelectorAll('input').forEach(c => c.checked = true);
     syncToggleLabel(id);
   });
-  $('dispoSearch').value = '';
+  $('grpSearch').value = '';
   $('searchInput').value = '';
   state.curMode = 'HW';
   markCurrency();
@@ -1916,7 +1917,7 @@ $('resetBtn').addEventListener('click', () => {
 ═══════════════════════════════════════════════════ */
 function applyFilters() {
   if (!state.rows.length) return;
-  const dispos = selectedNames('dispoList', state.dispos);
+  const grps   = selectedNames('grpList', state.grps);
   const melds  = selectedNames('meldList', state.meldungen);
   const from   = fromInputDate($('dateFrom').value);
   const to     = fromInputDate($('dateTo').value);
@@ -1927,7 +1928,7 @@ function applyFilters() {
 
   state.filtered = state.rows.filter(r => {
     if (!hw && r.waehrung !== state.curMode) return false;
-    if (!dispos.has(r.dispo)) return false;
+    if (!grps.has(r.einkgrp)) return false;
     if (!melds.has(r.meldung)) return false;
     if (r.lieferdatum) {
       if (from && r.lieferdatum < from) return false;
@@ -1945,14 +1946,14 @@ function applyFilters() {
     r.status = !r.lieferdatum ? 'ok' : r.lieferdatum < ref ? 'overdue' : r.lieferdatum <= in7 ? 'soon' : 'ok';
   });
 
-  renderSummary(dispos, melds, q);
+  renderSummary(grps, melds, q);
   render();
 }
 
-function renderSummary(dispos, melds, q) {
+function renderSummary(grps, melds, q) {
   const parts = [t('sum.rows', { n: fmtInt(state.filtered.length), t: fmtInt(state.rows.length) })];
   if (state.curMode !== 'HW')              parts.push(escHtml(t('sum.cur', { c: state.curMode })));
-  if (dispos.size < state.dispos.length)   parts.push(t('sum.dispo', { a: dispos.size, b: state.dispos.length }));
+  if (grps.size < state.grps.length)       parts.push(t('sum.grp', { a: grps.size, b: state.grps.length }));
   if (melds.size < state.meldungen.length) parts.push(t('sum.meld', { a: melds.size, b: state.meldungen.length }));
   if (q) parts.push(escHtml(t('sum.search', { q })));
   $('filterSummary').innerHTML = parts.join(' · ');
@@ -2514,7 +2515,7 @@ const tables = {
       colText('lieferant', 'col.supplier', 'lieferant', 'trunc', 34),
       colText('material', 'col.material', 'material', 'mono', 12),
       colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
-      colText('dispo', 'col.dispo', 'dispo', 'muted', 16),
+      colText('einkgrp', 'col.grp', 'einkgrp', 'muted', 16),
       colAB(),
       { key: 'meldung', label: () => t('col.meld'), cls: 'muted', sort: r => meldShort(r.meldung),
         html: r => r.meldung === NO_MELDUNG ? '–' : escHtml(meldShort(r.meldung)),
@@ -2537,7 +2538,7 @@ const tables = {
         colText('lieferant', 'col.supplier', 'lieferant', 'trunc', 34),
         colText('material', 'col.material', 'material', 'mono', 12),
         colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
-        colText('dispo', 'col.dispo', 'dispo', 'muted', 16),
+        colText('einkgrp', 'col.grp', 'einkgrp', 'muted', 16),
         colLieferdatum('col.deliveryDate'),
       ];
       if (a === '10' || a === '15') {
