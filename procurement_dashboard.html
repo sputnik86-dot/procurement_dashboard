@@ -5,9 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cicor – Procurement Dashboard</title>
 
-  <!-- Libraries: xlsx-js-style (Lesen + gestylter Export), Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <!-- Libraries: xlsx-js-style (Lesen + gestylter Export), Chart.js
+       data-lib: beim Speichern als Report werden sie inline eingebettet (offline lauffähig) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" data-lib="xlsx"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" data-lib="chartjs"></script>
+
+  <!-- Eingebettete Daten eines gespeicherten Reports (leer = normales Dashboard) -->
+  <script id="reportData" type="application/json"></script>
 
   <style>
     /* ─────────────────────────────────────────────
@@ -106,6 +110,23 @@
     }
     .pill[hidden] { display: none; }
     .pill.accent { color: #c7d2fe; border-color: rgba(99,102,241,0.35); }
+    .pill.report { color: #6ee7b7; border-color: var(--green-bd); background: var(--green-bg); }
+
+    .btn-primary {
+      flex-shrink: 0;
+      padding: 7px 14px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+      transition: filter 0.2s;
+    }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+    body.report-mode .drop-zone { cursor: default; border-style: solid; }
+    body.report-mode .drop-zone:hover { border-color: var(--green-bd); background: var(--green-bg); }
+    body.report-mode #saveReportBtn { display: none; }
+    .btn-primary:disabled { background: #334155; color: var(--text-3); cursor: not-allowed; }
 
     .lang-switch { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
     .lang-switch svg { width: 16px; height: 16px; color: var(--text-2); }
@@ -398,6 +419,48 @@
     .share .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
 
     .table-foot { font-size: 0.75rem; color: var(--text-3); }
+    .table-foot .flt-note { color: #c7d2fe; }
+
+    /* Spaltenfilter (Excel-AutoFilter) */
+    .th-in { display: inline-flex; align-items: center; gap: 6px; }
+    th.num .th-in { flex-direction: row; }
+    .flt-btn {
+      width: 20px; height: 20px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border-input); border-radius: 4px;
+      background: var(--input); color: var(--text-3); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .flt-btn:hover { color: var(--text); border-color: var(--border-hover); }
+    .flt-btn.on { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+    .flt-pop {
+      position: fixed; z-index: 200; width: 280px;
+      background: #131c2e; border: 1px solid var(--border-input); border-radius: 10px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+      padding: 8px; display: flex; flex-direction: column; gap: 6px;
+      font-size: 0.8rem; text-transform: none; letter-spacing: 0; font-weight: 400;
+    }
+    .flt-item {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 6px 8px; border: none; border-radius: 6px; background: none;
+      color: var(--text); font-size: 0.8rem; text-align: left; cursor: pointer;
+    }
+    .flt-item:hover:not(:disabled) { background: var(--accent-bg); }
+    .flt-item:disabled { color: var(--text-3); cursor: default; }
+    .flt-sep { height: 1px; background: var(--border); margin: 2px 0; }
+    .flt-list {
+      max-height: 240px; overflow-y: auto;
+      border: 1px solid var(--border); border-radius: 6px; padding: 4px; background: var(--input);
+    }
+    .flt-check { display: flex; align-items: center; gap: 8px; padding: 3px 6px; border-radius: 4px; cursor: pointer; color: var(--text); }
+    .flt-check:hover { background: rgba(148,163,184,0.08); }
+    .flt-check.all { font-weight: 600; border-bottom: 1px solid var(--border); margin-bottom: 2px; padding-bottom: 5px; }
+    .flt-check input { accent-color: var(--accent); width: 14px; height: 14px; flex-shrink: 0; }
+    .flt-check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .flt-more { padding: 6px; color: var(--text-3); font-size: 0.75rem; }
+    .flt-actions { display: flex; gap: 6px; justify-content: flex-end; }
+    .flt-actions .btn-secondary { width: auto; padding: 7px 14px; }
 
     footer { font-size: 0.75rem; color: var(--text-footer); text-align: center; padding: 6px 0 2px; }
 
@@ -429,7 +492,7 @@
       body:not(.sidebar-open) .sidebar { display: none; }
       body.sidebar-hidden.sidebar-open .sidebar { display: flex; }
       .main { padding: 12px 16px 16px; }
-      .header-sub, #filePill { display: none; }
+      .header-sub, #filePill, #reportPill { display: none; }
     }
     @media (max-width: 600px) {
       header { gap: 10px; padding: 0 12px; }
@@ -456,6 +519,8 @@
   <div class="header-right">
     <span class="pill" id="filePill" hidden></span>
     <span class="pill accent" id="stichtagPill" hidden></span>
+    <span class="pill report" id="reportPill" hidden></span>
+    <button class="btn-primary" id="saveReportBtn" disabled data-i18n="btn.saveReport" data-i18n-title="btn.saveReportTip">💾 Als Report speichern</button>
     <div class="lang-switch">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
       <select id="langSelect" data-i18n-aria="hdr.lang">
@@ -472,7 +537,7 @@
   <aside class="sidebar" id="sidebar">
 
     <div class="side-section">
-      <div class="side-label" data-i18n="side.file">Datei</div>
+      <div class="side-label" id="fileLabel" data-i18n="side.file">Datei</div>
       <div class="drop-zone" id="dropZone" tabindex="0" role="button" data-i18n-aria="drop.title">
         <span class="drop-icon" id="dropIcon">📄</span>
         <div class="drop-title" id="dropTitle" data-i18n="drop.title">ZBK-Liste laden</div>
@@ -713,6 +778,10 @@
 </div>
 
 <script>
+/* Unverändertes HTML dieser Seite – Vorlage für "Als Report speichern".
+   Muss als Erstes laufen, bevor das Script das DOM verändert. */
+const PRISTINE_HTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
 /* ═══════════════════════════════════════════════════
    ÜBERSETZUNGEN
 ═══════════════════════════════════════════════════ */
@@ -848,6 +917,20 @@ const I18N = {
     'file.stichtag': 'Stichtag',
 
     'unit.mio': ' Mio.', 'unit.tsd': ' Tsd.',
+    'flt.btn': 'Filtern und sortieren', 'flt.sortAsc': 'Aufsteigend sortieren', 'flt.sortDesc': 'Absteigend sortieren',
+    'flt.clear': 'Filter löschen aus „{c}“', 'flt.search': 'Suchen', 'flt.all': '(Alle auswählen)', 'flt.allResults': '(Alle Suchergebnisse auswählen)',
+    'flt.empty': '(Leer)', 'flt.ok': 'OK', 'flt.cancel': 'Abbrechen', 'flt.more': '… {n} weitere – Suche verwenden', 'flt.noMatch': 'Keine Treffer',
+    'flt.active': '{n} Spaltenfilter aktiv: {a} von {b} Zeilen', 'flt.clearAll': 'Alle Spaltenfilter löschen',
+
+    'btn.saveReport': '💾 Als Report speichern',
+    'btn.saveReportTip': 'Speichert eine Kopie des Dashboards mit den aktuell geladenen Daten als eigenständige HTML-Datei – zum Weitergeben an Kollegen, ohne Excel-Datei und ohne Internet lauffähig.',
+    'report.pill': 'Report · gespeichert {d}',
+    'report.pillTip': 'Gespeicherter Report aus {f}.',
+    'report.dropHint': '{n} Zeilen · Report erstellt {d}', 'report.side': 'Report',
+    'report.file': 'Procurement_Report',
+    'report.libFail': 'Report gespeichert – aber ohne eingebettete Bibliotheken',
+    'report.libFailMsg': 'Die Bibliotheken konnten nicht heruntergeladen werden. Der gespeicherte Report braucht deshalb beim Öffnen eine Internetverbindung.',
+    'report.saveFail': 'Report konnte nicht gespeichert werden',
   },
 
   en: {
@@ -977,6 +1060,20 @@ const I18N = {
     'file.stichtag': 'RefDate',
 
     'unit.mio': ' M', 'unit.tsd': 'k',
+    'flt.btn': 'Filter and sort', 'flt.sortAsc': 'Sort ascending', 'flt.sortDesc': 'Sort descending',
+    'flt.clear': 'Clear filter from “{c}”', 'flt.search': 'Search', 'flt.all': '(Select all)', 'flt.allResults': '(Select all search results)',
+    'flt.empty': '(Blanks)', 'flt.ok': 'OK', 'flt.cancel': 'Cancel', 'flt.more': '… {n} more – use search', 'flt.noMatch': 'No matches',
+    'flt.active': '{n} column filter(s) active: {a} of {b} rows', 'flt.clearAll': 'Clear all column filters',
+
+    'btn.saveReport': '💾 Save as report',
+    'btn.saveReportTip': 'Saves a copy of the dashboard with the currently loaded data as a standalone HTML file – to share with colleagues, works without the Excel file and offline.',
+    'report.pill': 'Report · saved {d}',
+    'report.pillTip': 'Saved report from {f}.',
+    'report.dropHint': '{n} rows · report created {d}', 'report.side': 'Report',
+    'report.file': 'Procurement_Report',
+    'report.libFail': 'Report saved – but without embedded libraries',
+    'report.libFailMsg': 'The libraries could not be downloaded. The saved report therefore needs an internet connection when opened.',
+    'report.saveFail': 'Report could not be saved',
   },
 };
 
@@ -1004,6 +1101,7 @@ function setLanguage(l) {
   $('langSelect').value = lang;
   try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
   applyStaticTranslations();
+  clearTableFilters();      // Filterwerte sind formatiert (Datum, Zahlen, Status) → sprachabhängig
   syncToggleLabel('dispoList');
   syncToggleLabel('meldList');
   if (lastError) showError(lastError.titleKey, lastError.html);
@@ -1011,7 +1109,7 @@ function setLanguage(l) {
   if (!state.rows.length) return;
   // geladene Daten in der neuen Sprache neu darstellen
   $('dropTitle').textContent = state.fileName;
-  $('dropHint').textContent = t('drop.loadedHint', { n: fmtInt(state.rows.length) });
+  updateReportUI();
   $('meldList').querySelectorAll('.check-item').forEach((el, i) => {
     const name = meldLabel(state.meldungen[i].name);
     el.querySelector('.check-name').textContent = name;
@@ -1192,14 +1290,14 @@ $('sidebarToggle').addEventListener('click', () => {
 const dropZone  = $('dropZone');
 const fileInput = $('fileInput');
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('click', () => { if (!state.isReport) fileInput.click(); });
+dropZone.addEventListener('keydown', e => { if (!state.isReport && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); fileInput.click(); } });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); if (!state.isReport) dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('dragover');
-  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+  if (!state.isReport && e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
 });
 fileInput.addEventListener('change', e => {
   if (e.target.files[0]) processFile(e.target.files[0]);
@@ -1207,6 +1305,7 @@ fileInput.addEventListener('change', e => {
 });
 
 function processFile(file) {
+  if (state.isReport) return;            // gespeicherter Report: Daten sind fix
   hideError();
   hideWarning();
   if (!/\.(xlsx|xls|xlsm)$/i.test(file.name)) {
@@ -1389,15 +1488,22 @@ function loadRows(aoa, fileName) {
   const hwRow = H.hw !== null && data.find(r => str(r[H.hw]));
   state.hw = hwRow ? str(hwRow[H.hw]) : 'CHF';
   state.hasOrigValues = H.orig !== null && curCol !== null;
+  state.featMissing = featMissing;
+  state.report = null;
+  detectStichtag(fileName);
+  activateData(fileName);
+}
+
+/** Geladene Zeilen (aus Excel oder eingebettetem Report) in die Oberfläche übernehmen */
+function activateData(fileName) {
   state.curMode = 'HW';
+  clearTableFilters();
 
   const times = state.rows.filter(r => r.lieferdatum).map(r => r.lieferdatum.getTime());
   state.dateMin = times.length ? new Date(times.reduce((a, b) => Math.min(a, b))) : null;
   state.dateMax = times.length ? new Date(times.reduce((a, b) => Math.max(a, b))) : null;
 
-  detectStichtag(fileName);
-
-  state.dispos    = countBy(state.rows, r => r.dispo).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  state.dispos   = countBy(state.rows, r => r.dispo).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   state.meldungen = countBy(state.rows, r => r.meldung).sort((a, b) => meldRank(a.name) - meldRank(b.name) || a.name.localeCompare(b.name, 'de'));
 
   buildCheckList('dispoList', state.dispos, x => x);
@@ -1408,9 +1514,9 @@ function loadRows(aoa, fileName) {
   setDateRange(state.dateMin, state.dateMax);
   markPreset('all');
 
-  if (featMissing.size) {
-    lastWarning = featMissing;
-    showWarning(featMissing);
+  if (state.featMissing && state.featMissing.size) {
+    lastWarning = state.featMissing;
+    showWarning(state.featMissing);
   }
 
   $('filePill').textContent = '📄 ' + fileName;
@@ -1418,15 +1524,171 @@ function loadRows(aoa, fileName) {
   $('filePill').hidden = false;
 
   dropZone.classList.add('loaded');
-  $('dropIcon').textContent  = '✓';
+  if (!state.isReport) $('dropIcon').textContent = '✓';
   state.fileName = fileName;
   $('dropTitle').textContent = fileName;
-  $('dropHint').textContent  = t('drop.loadedHint', { n: fmtInt(state.rows.length) });
+  updateReportUI();
 
   $('emptyState').style.display = 'none';
   $('dashboard').hidden = false;
+  $('saveReportBtn').disabled = false;
 
   applyFilters();
+}
+
+/* ═══════════════════════════════════════════════════
+   ALS REPORT SPEICHERN
+   Kopie des Dashboards mit eingebetteten Daten (JSON) und eingebetteten
+   Bibliotheken → eine einzelne HTML-Datei, offline lauffähig. Das Original
+   bleibt unverändert; im Report kann weiterhin Excel geladen werden.
+═══════════════════════════════════════════════════ */
+const ROW_FIELDS  = ['beleg', 'pos', 'eint', 'lieferdatum', 'belegdatum', 'betragHW', 'betragOrig', 'waehrung', 'ab', 'dispo',
+                     'kreditor', 'lieferant', 'material', 'kurztext', 'hersteller', 'mpn', 'abc', 'menge', 'me', 'meldung',
+                     'umterm', 'diff', 'excess', 'zbed', 'term', 'inco'];
+const DATE_FIELDS = new Set(['lieferdatum', 'belegdatum', 'umterm']);
+
+/** Lokale Zeit als "JJJJ-MM-TT HH:MM" – zeitzonenneutral für Kollegen an anderen Standorten */
+const toLocalStamp   = d => d ? toInputDate(d) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) : null;
+const fromLocalStamp = s => {
+  const m = s && s.match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?/);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : null;
+};
+
+function serializeData() {
+  const terms = [], termIdx = new Map();
+  const rows = state.rows.map(r => ROW_FIELDS.map(f => {
+    const v = r[f];
+    if (f === 'term') {
+      if (!termIdx.has(v)) { termIdx.set(v, terms.length); terms.push(v); }
+      return termIdx.get(v);
+    }
+    if (DATE_FIELDS.has(f)) return v ? toInputDate(v) : null;
+    return v === '' ? null : v;
+  }));
+  return {
+    v: 1,
+    created: toLocalStamp(new Date()),
+    fileName: state.fileName,
+    hw: state.hw,
+    hasOrigValues: state.hasOrigValues,
+    stichtag: toInputDate(state.stichtag),
+    stichtagAuto: toInputDate(state.stichtagAuto),
+    stichtagTs: toLocalStamp(state.stichtagTs),
+    stichtagManual: state.stichtagManual,
+    featMissing: state.featMissing ? [...state.featMissing] : [],
+    fields: ROW_FIELDS,
+    terms,
+    rows,
+  };
+}
+
+function loadEmbedded(p) {
+  const idx = Object.fromEntries(p.fields.map((f, i) => [f, i]));
+  state.rows = p.rows.map(a => {
+    const r = {};
+    for (const f of ROW_FIELDS) {
+      const v = idx[f] !== undefined ? a[idx[f]] : null;
+      if (f === 'term')            r.term = p.terms[v] || { code: '', text: '', net: 0, tiers: [], eom: false, prepay: false, p29: false };
+      else if (DATE_FIELDS.has(f)) r[f] = fromInputDate(v);
+      else if (f === 'diff')       r.diff = typeof v === 'number' ? v : null;
+      else                         r[f] = v === null || v === undefined ? '' : v;
+    }
+    for (const f of ['betragHW', 'betragOrig', 'menge', 'excess']) r[f] = +r[f] || 0;
+    r.key = r.beleg + '-' + r.pos;
+    return r;
+  });
+  state.hw = p.hw;
+  state.hasOrigValues = p.hasOrigValues;
+  state.featMissing = new Map(p.featMissing || []);
+  state.stichtagAuto = fromInputDate(p.stichtagAuto);
+  state.stichtagTs = fromLocalStamp(p.stichtagTs);
+  state.stichtagManual = !!p.stichtagManual;
+  state.stichtag = fromInputDate(p.stichtag) || state.stichtagAuto;
+  state.report = { created: fromLocalStamp(p.created), fileName: p.fileName };
+  state.isReport = true;
+  document.body.classList.add('report-mode');
+  $('fileInput').remove();
+  dropZone.removeAttribute('role');
+  dropZone.removeAttribute('tabindex');
+  $('dropIcon').textContent = '📊';
+  updateStichtagUI();
+  activateData(p.fileName);
+}
+
+function updateReportUI() {
+  if (!state.rows.length) return;
+  const rep = state.report;
+  $('reportPill').hidden = !rep;
+  if (rep) {
+    $('reportPill').textContent = t('report.pill', { d: fmtDateTime(rep.created) });
+    $('reportPill').title = t('report.pillTip', { f: rep.fileName });
+  }
+  $('dropHint').textContent = rep
+    ? t('report.dropHint', { n: fmtInt(state.rows.length), d: fmtDateTime(rep.created) })
+    : t('drop.loadedHint', { n: fmtInt(state.rows.length) });
+  if (state.isReport) $('fileLabel').textContent = t('report.side');
+}
+
+$('saveReportBtn').addEventListener('click', saveReport);
+
+async function saveReport() {
+  if (!state.rows.length) return;
+  showLoading(true);
+  try {
+    let html = PRISTINE_HTML;
+
+    // 1) Daten einbetten ("<" escapen, damit nichts den Script-Block beendet)
+    const json = JSON.stringify(serializeData()).replace(/</g, '\\u003c');
+    html = html.replace(/<script id="reportData" type="application\/json">[\s\S]*?<\/script>/,
+                        () => '<script id="reportData" type="application/json">' + json + '<\/script>');
+
+    // 2) Bibliotheken einbetten (nur solange sie noch per CDN eingebunden sind)
+    let libFail = false;
+    for (const m of [...html.matchAll(/<script\b[^>]*\bdata-lib="(\w+)"[^>]*><\/script>/g)]) {
+      const src = (m[0].match(/src="([^"]+)"/) || [])[1];
+      if (!src) continue;
+      try {
+        const res = await fetch(src);
+        if (!res.ok) throw new Error(res.status);
+        const code = (await res.text()).replace(/<\/script/gi, '<\\/script');
+        html = html.replace(m[0], () => '<script data-lib="' + m[1] + '">' + code + '<\/script>');
+      } catch (e) {
+        console.warn('Bibliothek nicht eingebettet:', src, e);
+        libFail = true;
+      }
+    }
+
+    // 3) Speichern – mit Dateidialog, wo der Browser ihn anbietet
+    const d = state.stichtag;
+    const name = `${t('report.file')}_${t('file.stichtag')}_${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}.html`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    let saved = false;
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }] });
+        const w = await handle.createWritable();
+        await w.write(blob);
+        await w.close();
+        saved = true;
+      } catch (e) {
+        if (e.name === 'AbortError') return;    // Benutzer hat abgebrochen
+      }
+    }
+    if (!saved) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+    if (libFail) showError('report.libFail', () => t('report.libFailMsg'));
+  } catch (err) {
+    console.error(err);
+    showError('report.saveFail', () => escHtml(err.message));
+  } finally {
+    showLoading(false);
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1629,6 +1891,7 @@ $('currencyChips').addEventListener('click', e => {
   if (!btn || !state.rows.length) return;
   state.curMode = btn.dataset.cur;
   markCurrency();
+  clearTableFilters();
   applyFilters();
 });
 
@@ -1860,6 +2123,7 @@ $('actionTiles').addEventListener('click', e => {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
   state.action = btn.dataset.action;
+  tables.actions.filters.clear();
   // sinnvolle Standardsortierung je Massnahme
   const SORT = { '10': ['diff', 1], '15': ['val', -1], '20': ['excess', -1], '07': ['lieferdatum', 1] };
   tables.actions.setSort(...SORT[state.action]);
@@ -1976,28 +2240,66 @@ function renderMaterial() {
 /* ═══════════════════════════════════════════════════
    TABELLEN (generisch: sortierbar, Limit, Excel-Export)
 ═══════════════════════════════════════════════════ */
+/** Anzeigewert einer Zelle für den Spaltenfilter – abgeleitet aus der Export-Definition,
+ *  damit gefiltert wird, was auch in Excel stünde ('' = leer) */
+function filterValueFn(c) {
+  if (c.fv) return c.fv;
+  const spec = Array.isArray(c.exp) ? c.exp[0] : c.exp;
+  if (!spec) return null;
+  return r => {
+    const v = spec.v(r);
+    if (v === null || v === undefined || v === '') return '';
+    if (spec.t === 'd') return fmtDate(v);
+    if (spec.t === 'n') {
+      if (spec.z === '0.0%')     return fmtNum(v * 100, 1) + ' %';
+      if (spec.z === '#,##0.00') return fmtMoney(v);
+      return fmtInt(v);
+    }
+    return String(v);
+  };
+}
+
 function DataTable(cfg) {
-  const tb = { sortKey: cfg.sort.key, sortDir: cfg.sort.dir };
+  const tb = { sortKey: cfg.sort.key, sortDir: cfg.sort.dir, filters: new Map() };   // filters: Spalte → Set erlaubter Werte
   const head = $(cfg.id + 'Head'), body = $(cfg.id + 'Body'), foot = $(cfg.id + 'Foot');
   const cols = () => (typeof cfg.columns === 'function' ? cfg.columns() : cfg.columns);
   const txt  = v => typeof v === 'function' ? v() : v;
+  tb.cols  = cols;
+  tb.txt   = txt;
+  tb.cfgId = cfg.id;
 
   head.addEventListener('click', e => {
     const th = e.target.closest('th');
     const c  = th && cols().find(x => x.key === th.dataset.key);
-    if (!c || !c.sort) return;
+    if (!c) return;
+    if (e.target.closest('.flt-btn')) { openFilterPopup(tb, c, e.target.closest('.flt-btn')); return; }
+    if (!c.sort) return;
     if (tb.sortKey === c.key) tb.sortDir *= -1;
     else { tb.sortKey = c.key; tb.sortDir = c.num ? -1 : 1; }
     tb.render();
   });
 
+  foot.addEventListener('click', e => {
+    if (e.target.closest('[data-clear-filters]')) { tb.filters.clear(); tb.render(); }
+  });
+
   tb.setSort = (key, dir) => { tb.sortKey = key; tb.sortDir = dir; };
+
+  /** Zeilen nach allen aktiven Spaltenfiltern – optional ohne eine Spalte (für deren Werteliste) */
+  tb.filteredRows = (exceptKey = null) => {
+    const active = cols().filter(c => c.key !== exceptKey && tb.filters.has(c.key))
+                         .map(c => [filterValueFn(c), tb.filters.get(c.key)]);
+    const base = cfg.getRows();
+    return active.length ? base.filter(r => active.every(([fv, set]) => set.has(fv(r)))) : base;
+  };
+
+  tb.activeFilterCount = () => cols().filter(c => tb.filters.has(c.key)).length;
 
   tb.rows = () => {
     const cs = cols();
     let c = cs.find(x => x.key === tb.sortKey && x.sort);
     if (!c) { c = cs.find(x => x.sort); tb.sortKey = c.key; }
-    return cfg.getRows().slice().sort((a, b) => {
+    return tb.filteredRows().slice().sort((a, b) => {
       const va = c.sort(a), vb = c.sort(b);
       return (va < vb ? -1 : va > vb ? 1 : 0) * tb.sortDir;
     });
@@ -2008,7 +2310,10 @@ function DataTable(cfg) {
     head.innerHTML = cs.map(c => {
       const arrow = tb.sortKey === c.key ? `<span class="sort">${tb.sortDir === 1 ? '▲' : '▼'}</span>` : '';
       const tip = c.tip ? ` title="${escHtml(txt(c.tip))}"` : '';
-      return `<th data-key="${c.key}" class="${c.num ? 'num' : ''} ${c.sort ? 'sortable' : ''}"${tip}>${escHtml(txt(c.label))}${arrow}</th>`;
+      const flt = filterValueFn(c)
+        ? `<button class="flt-btn ${tb.filters.has(c.key) ? 'on' : ''}" title="${escHtml(t('flt.btn'))}" aria-label="${escHtml(t('flt.btn'))}">${FUNNEL_SVG}</button>`
+        : '';
+      return `<th data-key="${c.key}" class="${c.num ? 'num' : ''} ${c.sort ? 'sortable' : ''}"${tip}><span class="th-in"><span>${escHtml(txt(c.label))}${arrow}</span>${flt}</span></th>`;
     }).join('');
     const all  = tb.rows();
     const rows = all.slice(0, cfg.limit || TABLE_LIMIT);
@@ -2016,7 +2321,13 @@ function DataTable(cfg) {
       ? rows.map(r => '<tr>' + cs.map(c => `<td class="${c.cls || (c.num ? 'num' : '')}">${c.html(r)}</td>`).join('') + '</tr>').join('')
       : `<tr><td class="empty" colspan="${cs.length}">${escHtml(txt(cfg.empty) || t('tbl.empty'))}</td></tr>`;
     const more = all.length > rows.length ? t('tbl.more', { a: fmtInt(rows.length), b: fmtInt(all.length) }) : '';
-    foot.textContent = more + (cfg.footer ? cfg.footer(all) : t('tbl.rows', { n: fmtInt(all.length) }));
+    let html = escHtml(more + (cfg.footer ? cfg.footer(all) : t('tbl.rows', { n: fmtInt(all.length) })));
+    const nf = tb.activeFilterCount();
+    if (nf) {
+      html += ` · <span class="flt-note">${escHtml(t('flt.active', { n: nf, a: fmtInt(all.length), b: fmtInt(cfg.getRows().length) }))}</span>` +
+              ` <button class="link-btn" data-clear-filters>${escHtml(t('flt.clearAll'))}</button>`;
+    }
+    foot.innerHTML = html;
   };
 
   tb.export = () => {
@@ -2027,6 +2338,127 @@ function DataTable(cfg) {
   };
 
   return tb;
+}
+
+/* ═══════════════════════════════════════════════════
+   SPALTENFILTER-MENÜ (wie Excel-AutoFilter)
+═══════════════════════════════════════════════════ */
+const FUNNEL_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/></svg>';
+const FLT_RENDER_LIMIT = 500;
+let fltPop = null;
+
+function closeFilterPopup() {
+  if (fltPop) { fltPop.remove(); fltPop = null; }
+}
+
+function openFilterPopup(tb, col, anchor) {
+  const reopen = fltPop && fltPop.dataset.key === tb.cfgId + col.key;
+  closeFilterPopup();
+  if (reopen) return;
+
+  const fv = filterValueFn(col);
+  // Werteliste aus den Zeilen, die nach den übrigen Filtern übrig bleiben (wie Excel)
+  const rows = tb.filteredRows(col.key);
+  const vals = new Map();   // Wert → Sortierschlüssel
+  rows.forEach(r => { const v = fv(r); if (!vals.has(v)) vals.set(v, col.sort ? col.sort(r) : v); });
+  const values = [...vals.keys()].sort((a, b) => {
+    if (a === '') return 1; if (b === '') return -1;
+    const ka = vals.get(a), kb = vals.get(b);
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+  const current = tb.filters.get(col.key);
+  const checked = new Set(current ? values.filter(v => current.has(v)) : values);
+  const label   = tb.txt(col.label);
+
+  const pop = document.createElement('div');
+  pop.className = 'flt-pop';
+  pop.dataset.key = tb.cfgId + col.key;
+  pop.innerHTML = `
+    ${col.sort ? `<button class="flt-item" data-sort="1">↑ ${escHtml(t('flt.sortAsc'))}</button>
+                  <button class="flt-item" data-sort="-1">↓ ${escHtml(t('flt.sortDesc'))}</button>
+                  <div class="flt-sep"></div>` : ''}
+    <button class="flt-item" data-clear ${current ? '' : 'disabled'}>${FUNNEL_SVG} ${escHtml(t('flt.clear', { c: label }))}</button>
+    <input class="input flt-search" type="search" placeholder="${escHtml(t('flt.search'))}" />
+    <div class="flt-list"></div>
+    <div class="flt-actions">
+      <button class="btn-primary" data-ok>${escHtml(t('flt.ok'))}</button>
+      <button class="btn-secondary" data-cancel>${escHtml(t('flt.cancel'))}</button>
+    </div>`;
+  document.body.appendChild(pop);
+  fltPop = pop;
+
+  const list   = pop.querySelector('.flt-list');
+  const search = pop.querySelector('.flt-search');
+  const shown  = () => {
+    const q = search.value.toLowerCase().trim();
+    return q ? values.filter(v => (v || t('flt.empty')).toLowerCase().includes(q)) : values;
+  };
+
+  function drawList() {
+    const vis = shown();
+    const q = search.value.trim();
+    const allOn = vis.length && vis.every(v => checked.has(v));
+    list.innerHTML =
+      `<label class="flt-check all"><input type="checkbox" data-all ${allOn ? 'checked' : ''}/> ${escHtml(q ? t('flt.allResults') : t('flt.all'))}</label>` +
+      vis.slice(0, FLT_RENDER_LIMIT).map((v, i) =>
+        `<label class="flt-check"><input type="checkbox" data-i="${i}" ${checked.has(v) ? 'checked' : ''}/> <span>${escHtml(v === '' ? t('flt.empty') : v)}</span></label>`).join('') +
+      (vis.length > FLT_RENDER_LIMIT ? `<div class="flt-more">${escHtml(t('flt.more', { n: fmtInt(vis.length - FLT_RENDER_LIMIT) }))}</div>` : '') +
+      (!vis.length ? `<div class="flt-more">${escHtml(t('flt.noMatch'))}</div>` : '');
+    const someOn = vis.some(v => checked.has(v));
+    list.querySelector('[data-all]').indeterminate = !allOn && someOn;
+    pop.querySelector('[data-ok]').disabled = !vis.some(v => checked.has(v));
+  }
+
+  list.addEventListener('change', e => {
+    const vis = shown();
+    if (e.target.dataset.all !== undefined) vis.forEach(v => e.target.checked ? checked.add(v) : checked.delete(v));
+    else { const v = vis[+e.target.dataset.i]; e.target.checked ? checked.add(v) : checked.delete(v); }
+    drawList();
+  });
+  search.addEventListener('input', () => {
+    // Wie Excel: Suche markiert alle Treffer
+    if (search.value.trim()) { checked.clear(); shown().forEach(v => checked.add(v)); }
+    else { checked.clear(); (current ? values.filter(v => current.has(v)) : values).forEach(v => checked.add(v)); }
+    drawList();
+  });
+
+  pop.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.sort) { tb.setSort(col.key, +b.dataset.sort); closeFilterPopup(); tb.render(); }
+    else if (b.dataset.clear !== undefined) { tb.filters.delete(col.key); closeFilterPopup(); tb.render(); }
+    else if (b.dataset.cancel !== undefined) closeFilterPopup();
+    else if (b.dataset.ok !== undefined) {
+      const sel = search.value.trim() ? shown().filter(v => checked.has(v)) : values.filter(v => checked.has(v));
+      if (sel.length === values.length) tb.filters.delete(col.key);
+      else tb.filters.set(col.key, new Set(sel));
+      closeFilterPopup();
+      tb.render();
+    }
+  });
+  search.addEventListener('keydown', e => { if (e.key === 'Enter') pop.querySelector('[data-ok]').click(); });
+
+  drawList();
+
+  // Position unter dem Filterknopf, im Fenster halten
+  const r = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)) + 'px';
+  pop.style.top  = (r.bottom + 4 + h > window.innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px';
+  search.focus();
+}
+
+document.addEventListener('mousedown', e => {
+  if (fltPop && !fltPop.contains(e.target) && !e.target.closest('.flt-btn')) closeFilterPopup();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFilterPopup(); });
+window.addEventListener('resize', closeFilterPopup);
+$('main').addEventListener('scroll', closeFilterPopup, { passive: true });
+document.querySelectorAll('.table-scroll').forEach(el => el.addEventListener('scroll', closeFilterPopup, { passive: true }));
+
+function clearTableFilters() {
+  closeFilterPopup();
+  if (typeof tables !== 'undefined') Object.values(tables).forEach(tb => tb.filters.clear());
 }
 
 /* Spalten-Bausteine (Labels als Funktionen → sprachabhängig) */
@@ -2511,6 +2943,14 @@ function hideWarning() { $('warnBox').hidden = true; lastWarning = null; }
 
   if (typeof XLSX === 'undefined' || typeof Chart === 'undefined') {
     showError('err.lib', () => t('err.libMsg'));
+    return;
+  }
+
+  // Gespeicherter Report: eingebettete Daten direkt laden
+  const embedded = $('reportData').textContent.trim();
+  if (embedded) {
+    try { loadEmbedded(JSON.parse(embedded)); }
+    catch (err) { console.error(err); showError('err.read', () => escHtml(err.message)); }
   }
 })();
 </script>
