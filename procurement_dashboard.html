@@ -176,18 +176,31 @@
     .link-btn:hover { background: var(--accent-bg); }
     .link-btn[hidden] { display: none; }
 
+    [hidden] { display: none !important; }
+
+    .drop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
     .drop-zone {
       border: 1px dashed var(--border-input);
       border-radius: var(--radius);
-      padding: 16px 12px; text-align: center; cursor: pointer;
+      padding: 10px 5px; text-align: center; cursor: pointer;
       background: var(--card); transition: all 0.2s;
+      position: relative; min-width: 0;
     }
+    .drop-tag   { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-top: 1px; }
+    .drop-file  { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+    .drop-remove {
+      position: absolute; top: 4px; right: 4px; width: 20px; height: 20px;
+      border: none; border-radius: 4px; background: none;
+      color: var(--text-3); font-size: 15px; line-height: 1; cursor: pointer;
+    }
+    .drop-remove:hover { color: var(--red); background: var(--red-bg); }
+    #stockInput, #t024Input { display: none; }
     .drop-zone:hover, .drop-zone.dragover { border-color: var(--border-hover); background: var(--accent-bg); }
     .drop-zone.loaded { border-style: solid; border-color: var(--green-bd); background: var(--green-bg); }
     .drop-icon  { font-size: 1.3rem; display: block; margin-bottom: 4px; }
-    .drop-title { font-size: 0.85rem; font-weight: 600; color: var(--text); word-break: break-word; }
+    .drop-title { font-size: 0.74rem; font-weight: 700; color: var(--text); letter-spacing: 0.01em; }
     .drop-zone.loaded .drop-title { color: var(--green); }
-    .drop-hint  { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; }
+    .drop-hint  { font-size: 0.72rem; color: var(--text-3); margin-top: 3px; line-height: 1.4; word-break: break-word; }
     #fileInput  { display: none; }
 
     .input {
@@ -398,6 +411,8 @@
     td.mono  { font-variant-numeric: tabular-nums; color: var(--text-2); }
     td.empty { text-align: center; color: var(--text-3); padding: 30px; white-space: normal; }
     .sub-id  { color: var(--text-3); }
+    .val-excess   { color: var(--amber); }
+    .val-obsolete { color: var(--red); }
     .late    { color: var(--red); }
     .pos     { color: var(--amber); }
 
@@ -537,12 +552,31 @@
   <aside class="sidebar" id="sidebar">
 
     <div class="side-section">
-      <div class="side-label" id="fileLabel" data-i18n="side.file">Datei</div>
-      <div class="drop-zone" id="dropZone" tabindex="0" role="button" data-i18n-aria="drop.title">
-        <span class="drop-icon" id="dropIcon">📄</span>
-        <div class="drop-title" id="dropTitle" data-i18n="drop.title">ZBK-Liste laden</div>
-        <div class="drop-hint" id="dropHint" data-i18n="drop.hint">Drag &amp; Drop oder klicken (.xlsx)</div>
-        <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" />
+      <div class="side-label" id="fileLabel" data-i18n="side.file">Daten</div>
+      <div class="drop-grid">
+        <div class="drop-zone" id="dropZone" tabindex="0" role="button" data-i18n-aria="drop.title">
+          <span class="drop-icon" id="dropIcon">📄</span>
+          <div class="drop-title" id="dropTitle">ZBK</div>
+          <div class="drop-tag" data-i18n="drop.required">Pflicht</div>
+          <div class="drop-hint" id="dropHint" data-i18n="drop.hint">Datei ziehen oder klicken</div>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" multiple />
+        </div>
+        <div class="drop-zone" id="stockZone" tabindex="0" role="button" data-i18n-aria="stock.aria">
+          <button class="drop-remove" id="stockRemove" data-i18n-title="stock.remove" data-i18n-aria="stock.remove" hidden>×</button>
+          <span class="drop-icon" id="stockIcon">📦</span>
+          <div class="drop-title">ZMMSTOCK</div>
+          <div class="drop-tag" data-i18n="drop.optional">optional</div>
+          <div class="drop-hint" id="stockHint" data-i18n="drop.hint">Datei ziehen oder klicken</div>
+          <input type="file" id="stockInput" accept=".xlsx,.xls,.xlsm" multiple />
+        </div>
+        <div class="drop-zone" id="t024Zone" tabindex="0" role="button" data-i18n-aria="t024.aria">
+          <button class="drop-remove" id="t024Remove" data-i18n-title="t024.remove" data-i18n-aria="t024.remove" hidden>×</button>
+          <span class="drop-icon" id="t024Icon">👥</span>
+          <div class="drop-title">T024</div>
+          <div class="drop-tag" data-i18n="drop.optional">optional</div>
+          <div class="drop-hint" id="t024Hint" data-i18n="drop.hint">Datei ziehen oder klicken</div>
+          <input type="file" id="t024Input" accept=".xlsx,.xls,.xlsm" multiple />
+        </div>
       </div>
     </div>
 
@@ -583,6 +617,12 @@
       <div class="scroll-list" id="grpList"></div>
     </div>
 
+    <div class="side-section" id="custSection" hidden>
+      <div class="side-label"><span data-i18n="side.cust">Kunde</span><button class="link-btn" id="custToggle"></button></div>
+      <input class="input" id="custSearch" type="search" data-i18n-ph="ph.cust" />
+      <div class="scroll-list" id="custList"></div>
+    </div>
+
     <div class="side-section">
       <div class="side-label"><span data-i18n="side.meld">Ausnahmemeldung</span><button class="link-btn" id="meldToggle"></button></div>
       <div class="scroll-list" id="meldList"></div>
@@ -616,6 +656,7 @@
         <button class="view-tab" data-view="actions" data-i18n="tab.actions">Massnahmen</button>
         <button class="view-tab" data-view="payments" data-i18n="tab.payments">Zahlungen &amp; Konditionen</button>
         <button class="view-tab" data-view="material" data-i18n="tab.material">Material &amp; Hersteller</button>
+        <button class="view-tab" data-view="stock" id="stockTab" data-i18n="tab.stock" hidden>Lager</button>
       </nav>
 
       <!-- ════════════ ÜBERSICHT ════════════ -->
@@ -626,6 +667,13 @@
           <div class="kpi red"><div class="kpi-label" data-i18n="kpi.overdue">Überfällig</div><div class="kpi-value" id="kpiOverdue">—</div><div class="kpi-sub" id="kpiOverdueSub">—</div></div>
           <div class="kpi amber"><div class="kpi-label" data-i18n="kpi.noab">Ohne Auftragsbestätigung</div><div class="kpi-value" id="kpiNoAB">—</div><div class="kpi-sub" id="kpiNoABSub">—</div></div>
           <div class="kpi green"><div class="kpi-label" data-i18n="kpi.sup">Lieferanten</div><div class="kpi-value" id="kpiSup">—</div><div class="kpi-sub" data-i18n="kpi.supSub">Kreditoren mit offenen Positionen</div></div>
+        </div>
+
+        <div class="kpi-grid four" id="stockKpis" hidden>
+          <div class="kpi"><div class="kpi-label" data-i18n="stk.k1">Lagerwert</div><div class="kpi-value" id="ovStock">—</div><div class="kpi-sub" id="ovStockSub">—</div></div>
+          <div class="kpi amber"><div class="kpi-label" data-i18n="stk.k2">davon Excess</div><div class="kpi-value" id="ovExcess">—</div><div class="kpi-sub" id="ovExcessSub">—</div></div>
+          <div class="kpi red"><div class="kpi-label" data-i18n="stk.k3">davon Obsolete</div><div class="kpi-value" id="ovObsolete">—</div><div class="kpi-sub" id="ovObsoleteSub">—</div></div>
+          <div class="kpi grey"><div class="kpi-label" data-i18n="ov.capital">Gebundenes Kapital</div><div class="kpi-value" id="ovCapital">—</div><div class="kpi-sub" id="ovCapitalSub">—</div></div>
         </div>
 
         <div class="card">
@@ -654,6 +702,17 @@
             <div><div class="card-title" data-i18n="meld.title">SAP-Ausnahmemeldungen</div><div class="card-sub" data-i18n="meld.sub">Offener Wert je Meldung</div></div>
             <div class="chart-box" style="height:230px"><canvas id="meldChart" role="img" data-i18n-aria="meld.title"></canvas></div>
           </div>
+        </div>
+
+        <div class="card" id="capCard" hidden>
+          <div class="card-header">
+            <div><div class="card-title" data-i18n="cap.title">Gebundenes Kapital je Kunde</div><div class="card-sub" id="capSub">—</div></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.capStock">Lagerwert</span></span>
+              <span><i class="swatch" style="background:#0d9488"></i><span data-i18n="leg.capOrders">Offene Bestellungen</span></span>
+            </div>
+          </div>
+          <div class="chart-box" style="height:320px"><canvas id="capChart" role="img" data-i18n-aria="cap.title"></canvas></div>
         </div>
 
         <div class="card">
@@ -771,6 +830,59 @@
         </div>
       </section>
 
+      <!-- ════════════ LAGER (ZMMSTOCK) ════════════ -->
+      <section class="view" id="view-stock" hidden>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-label" data-i18n="stk.k1">Lagerwert</div><div class="kpi-value" id="stkVal">—</div><div class="kpi-sub" id="stkValSub">—</div></div>
+          <div class="kpi amber"><div class="kpi-label" data-i18n="stk.k2">davon Excess</div><div class="kpi-value" id="stkEx">—</div><div class="kpi-sub" id="stkExSub">—</div></div>
+          <div class="kpi red"><div class="kpi-label" data-i18n="stk.k3">davon Obsolete</div><div class="kpi-value" id="stkOb">—</div><div class="kpi-sub" id="stkObSub">—</div></div>
+          <button class="kpi grey" id="stkOrdTile" data-i18n-title="stk.k4tip"><div class="kpi-label" data-i18n="stk.k4">Bestellt trotz Excess</div><div class="kpi-value" id="stkOrd">—</div><div class="kpi-sub" id="stkOrdSub">—</div></button>
+          <div class="kpi green"><div class="kpi-label" data-i18n="stk.k5">Kunden</div><div class="kpi-value" id="stkCust">—</div><div class="kpi-sub" id="stkCustSub">—</div></div>
+        </div>
+
+        <div class="row-2">
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title" data-i18n="stk.custTitle">Lagerwert je Kunde</div><div class="card-sub" data-i18n="stk.chartSub">—</div></div>
+              <div class="legend">
+                <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.stock">Lagerwert</span></span>
+                <span><i class="swatch" style="background:var(--amber)"></i><span data-i18n="leg.excess">Excess</span></span>
+                <span><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.obsolete">Obsolete</span></span>
+              </div>
+            </div>
+            <div class="chart-box" style="height:420px"><canvas id="stkCustChart" role="img" data-i18n-aria="stk.custTitle"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title" data-i18n="stk.grpTitle">Lagerwert je Einkäufergruppe</div><div class="card-sub" data-i18n="stk.chartSub">—</div></div>
+              <div class="legend">
+                <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.stock">Lagerwert</span></span>
+                <span><i class="swatch" style="background:var(--amber)"></i><span data-i18n="leg.excess">Excess</span></span>
+                <span><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.obsolete">Obsolete</span></span>
+              </div>
+            </div>
+            <div class="chart-box" style="height:420px"><canvas id="stkGrpChart" role="img" data-i18n-aria="stk.grpTitle"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card" id="stockTableCard">
+          <div class="card-header">
+            <div><div class="card-title" data-i18n="stk.tableTitle">Lagerbestand je Material</div><div class="card-sub" id="stkTableSub">—</div></div>
+            <div class="table-tools">
+              <div class="chips" id="stockQuick">
+                <button class="chip active" data-sq="all" data-i18n="stk.f.all">Alle</button>
+                <button class="chip" data-sq="excess" data-i18n="stk.f.excess">Mit Excess</button>
+                <button class="chip" data-sq="obsolete" data-i18n="stk.f.obsolete">Obsolete</button>
+                <button class="chip" data-sq="ordered" data-i18n="stk.k4">Bestellt trotz Excess</button>
+              </div>
+              <button class="btn-download" data-export="stock" data-i18n="btn.export">⬇ Excel-Export</button>
+            </div>
+          </div>
+          <div class="table-scroll"><table><thead><tr id="stockHead"></tr></thead><tbody id="stockBody"></tbody></table></div>
+          <div class="table-foot" id="stockFoot"></div>
+        </div>
+      </section>
+
     </div>
 
     <footer data-i18n="footer">Cicor Procurement Tools · Daten werden ausschliesslich lokal im Browser verarbeitet</footer>
@@ -795,8 +907,13 @@ const I18N = {
     'hdr.toggle': 'Filter ein-/ausblenden',
     'hdr.sub': 'Cicor Group · Einkauf · offene Bestellungen (ZBK)',
     'hdr.lang': 'Sprache',
-    'side.file': 'Datei', 'drop.title': 'ZBK-Liste laden', 'drop.hint': 'Drag & Drop oder klicken (.xlsx)',
-    'drop.loadedHint': '{n} Zeilen · klicken zum Wechseln',
+    'side.file': 'Daten', 'drop.title': 'ZBK laden', 'drop.hint': 'Datei ziehen oder klicken',
+    'drop.required': 'Pflicht', 'drop.optional': 'optional', 'drop.rows': '{n} Zeilen',
+    'stock.aria': 'ZMMSTOCK laden', 'stock.remove': 'ZMMSTOCK entfernen', 'stock.mats': '{n} Materialien', 'stock.waiting': 'wartet auf ZBK',
+    't024.aria': 'T024 laden', 't024.remove': 'T024 entfernen', 't024.groups': '{n} Gruppen',
+    'err.t024Missing': 'T024 nicht geladen – Pflichtspalten fehlen',
+    'err.t024MissingHint': 'Bitte die Tabelle T024 mit Schlüssel und Bezeichnung der Einkäufergruppe exportieren. Reihenfolge und Sprache (DE/EN) spielen keine Rolle.',
+    'err.t024NoRows': 'T024 enthält keine Einkäufergruppen.',
     'side.stichtag': 'Stichtag', 'btn.resetShort': 'zurücksetzen',
     'stichtag.initial': 'Wird beim Laden aus dem Dateinamen bestimmt.',
     'stichtag.fromFile': 'Aus Dateiname: Export-Zeitstempel {ts}.',
@@ -815,7 +932,7 @@ const I18N = {
     'sum.rows': '<strong>{n}</strong> von {t} Einteilungen', 'sum.cur': 'nur {c}-Bestellungen',
     'sum.grp': '{a}/{b} Einkäufergruppen', 'sum.meld': '{a}/{b} Meldungen', 'sum.search': 'Suche „{q}“',
     'empty.title': 'Noch keine Daten geladen',
-    'empty.sub': 'ZBK-Export aus SAP (Excel, Deutsch oder Englisch) links in das Feld ziehen oder anklicken. Die Datei wird nur lokal im Browser verarbeitet.',
+    'empty.sub': 'ZBK-Export aus SAP (Pflicht) links in das Feld ziehen. Optional zusätzlich ZMMSTOCK für Lagerbestand und Kundenzuordnung sowie T024 für die Namen der Einkäufergruppen. Deutsch oder Englisch, die Dateien werden nur lokal im Browser verarbeitet.',
     'footer': 'Cicor Procurement Tools · Daten werden ausschliesslich lokal im Browser verarbeitet',
 
     'err.type': 'Falscher Dateityp', 'err.typeMsg': '<strong>{f}</strong> ist keine Excel-Datei. Bitte den ZBK-Export als .xlsx laden.',
@@ -917,6 +1034,36 @@ const I18N = {
     'file.stichtag': 'Stichtag',
 
     'unit.mio': ' Mio.', 'unit.tsd': ' Tsd.',
+
+    'err.unknown': 'Datei nicht erkannt',
+    'err.unknownMsg': '<strong>{f}</strong> ist weder ein ZBK- noch ein ZMMSTOCK- noch ein T024-Export. Erwartet werden u. a. die Spalten „Einkaufsbeleg“ (ZBK), „Material“ und „Gesamtwert“ (ZMMSTOCK) bzw. „Einkäufergruppe“ und „Bezeichnung EkGrp“ (T024).',
+    'err.stockMissing': 'ZMMSTOCK nicht geladen – Pflichtspalten fehlen',
+    'err.stockMissingHint': 'Bitte den ZMMSTOCK-Export mit diesen Spalten erneut erzeugen. Die Reihenfolge der Spalten und die Sprache (DE/EN) spielen keine Rolle.',
+    'err.stockNoRows': 'ZMMSTOCK enthält keine Materialien.',
+    'warn.stockDate': 'ZMMSTOCK (Stand {a}) und ZBK (Stand {b}) stammen von unterschiedlichen Tagen.',
+    'feat.stockExcess': 'Excess / Obsolete im Lager', 'feat.cust': 'Kundenzuordnung (Reporting Account)',
+    'side.cust': 'Kunde', 'ph.cust': 'Kunde suchen…', 'cust.none': '(ohne Kunde)',
+    'sum.cust': '{a}/{b} Kunden', 'sum.stock': '{a} von {b} Lagermaterialien',
+    'tab.stock': 'Lager',
+    'stk.k1': 'Lagerwert', 'stk.k1sub': '{n} Materialien', 'stk.k2': 'davon Excess', 'stk.k3': 'davon Obsolete',
+    'stk.kShare': '{p} des Lagerwerts · {n} Materialien',
+    'stk.k4': 'Bestellt trotz Excess', 'stk.k4sub': '{n} Materialien · Excess {v}',
+    'stk.k4tip': 'Materialien mit Excess-Bestand, auf die noch offene Bestellungen laufen – Klick zeigt sie in der Tabelle',
+    'stk.k5': 'Kunden', 'stk.k5sub': '{p} des Lagerwerts zugeordnet',
+    'stk.custTitle': 'Lagerwert je Kunde (Top 15)', 'stk.grpTitle': 'Lagerwert je Einkäufergruppe (Top 15)',
+    'stk.chartSub': 'Balkenlänge = Lagerwert · Excess umfasst auch den obsoleten Bestand · Klick filtert',
+    'leg.stock': 'Lagerwert', 'leg.excess': 'Excess', 'leg.obsolete': 'davon Obsolete',
+    'tip.stock': 'Lagerwert: {v}', 'tip.excess': 'davon Excess: {v}', 'tip.obsolete': 'davon Obsolete: {v}',
+    'stk.tableTitle': 'Lagerbestand je Material', 'stk.tableSub': 'Stand ZMMSTOCK {d} · Werte in {c} · offene Bestellungen aus der ZBK (gefiltert)',
+    'stk.f.all': 'Alle', 'stk.f.excess': 'Mit Excess', 'stk.f.obsolete': 'Obsolete',
+    'stk.foot': '{n} Materialien · Lagerwert {v}', 'stk.empty': 'Keine Materialien für diese Auswahl.',
+    'col.cust': 'Kunde', 'col.stockQty': 'Bestand', 'col.stockVal': 'Lagerwert {c}', 'col.excessVal': 'davon Excess {c}',
+    'col.obsoleteVal': 'davon Obsolete {c}', 'col.openOrders': 'Offene Bestellungen {c}',
+    'col.stockExcess': 'Excess Lager {c}', 'col.stockExcessTip': 'Excess-Wert des Materials laut ZMMSTOCK',
+    'file.stock': 'Procurement_Lager', 'sheet.stock': 'Lager',
+    'ov.capital': 'Gebundenes Kapital', 'ov.capitalSub': 'Lager {a} + offene Bestellungen {b}',
+    'cap.title': 'Gebundenes Kapital je Kunde (Top 10)', 'cap.sub': 'Lagerwert + offener Bestellwert in {c} · Kunde über Material aus ZMMSTOCK · Klick filtert',
+    'leg.capStock': 'Lagerwert', 'leg.capOrders': 'Offene Bestellungen',
     'flt.btn': 'Filtern und sortieren', 'flt.sortAsc': 'Aufsteigend sortieren', 'flt.sortDesc': 'Absteigend sortieren',
     'flt.clear': 'Filter löschen aus „{c}“', 'flt.search': 'Suchen', 'flt.all': '(Alle auswählen)', 'flt.allResults': '(Alle Suchergebnisse auswählen)',
     'flt.empty': '(Leer)', 'flt.ok': 'OK', 'flt.cancel': 'Abbrechen', 'flt.more': '… {n} weitere – Suche verwenden', 'flt.noMatch': 'Keine Treffer',
@@ -938,8 +1085,13 @@ const I18N = {
     'hdr.toggle': 'Show/hide filters',
     'hdr.sub': 'Cicor Group · Procurement · open purchase orders (ZBK)',
     'hdr.lang': 'Language',
-    'side.file': 'File', 'drop.title': 'Load ZBK list', 'drop.hint': 'Drag & drop or click (.xlsx)',
-    'drop.loadedHint': '{n} rows · click to change',
+    'side.file': 'Data', 'drop.title': 'Load ZBK', 'drop.hint': 'Drop file or click',
+    'drop.required': 'required', 'drop.optional': 'optional', 'drop.rows': '{n} rows',
+    'stock.aria': 'Load ZMMSTOCK', 'stock.remove': 'Remove ZMMSTOCK', 'stock.mats': '{n} materials', 'stock.waiting': 'waiting for ZBK',
+    't024.aria': 'Load T024', 't024.remove': 'Remove T024', 't024.groups': '{n} groups',
+    'err.t024Missing': 'T024 not loaded – required columns missing',
+    'err.t024MissingHint': 'Please export table T024 including purchasing group key and description. Column order and language (DE/EN) do not matter.',
+    'err.t024NoRows': 'T024 contains no purchasing groups.',
     'side.stichtag': 'Reference date', 'btn.resetShort': 'reset',
     'stichtag.initial': 'Taken from the file name when loading.',
     'stichtag.fromFile': 'From file name: export timestamp {ts}.',
@@ -958,7 +1110,7 @@ const I18N = {
     'sum.rows': '<strong>{n}</strong> of {t} schedule lines', 'sum.cur': 'only {c} orders',
     'sum.grp': '{a}/{b} purchasing groups', 'sum.meld': '{a}/{b} messages', 'sum.search': 'search “{q}”',
     'empty.title': 'No data loaded yet',
-    'empty.sub': 'Drag the ZBK export from SAP (Excel, German or English) onto the field on the left or click it. The file is processed locally in your browser only.',
+    'empty.sub': 'Drop the ZBK export from SAP (required) onto the field on the left. Optionally add ZMMSTOCK for stock and customer assignment and T024 for purchasing group names. German or English; files are processed locally in your browser only.',
     'footer': 'Cicor Procurement Tools · Data is processed locally in your browser only',
 
     'err.type': 'Wrong file type', 'err.typeMsg': '<strong>{f}</strong> is not an Excel file. Please load the ZBK export as .xlsx.',
@@ -1060,6 +1212,36 @@ const I18N = {
     'file.stichtag': 'RefDate',
 
     'unit.mio': ' M', 'unit.tsd': 'k',
+
+    'err.unknown': 'File not recognised',
+    'err.unknownMsg': '<strong>{f}</strong> is neither a ZBK, ZMMSTOCK nor T024 export. Expected columns include “Purchasing Document” (ZBK), “Material” and “Total Value” (ZMMSTOCK) or “Purchasing Group” and its description (T024).',
+    'err.stockMissing': 'ZMMSTOCK not loaded – required columns missing',
+    'err.stockMissingHint': 'Please re-create the ZMMSTOCK export including these columns. Column order and language (DE/EN) do not matter.',
+    'err.stockNoRows': 'ZMMSTOCK contains no materials.',
+    'warn.stockDate': 'ZMMSTOCK (as of {a}) and ZBK (as of {b}) are from different days.',
+    'feat.stockExcess': 'Excess / obsolete stock', 'feat.cust': 'Customer assignment (reporting account)',
+    'side.cust': 'Customer', 'ph.cust': 'Search customer…', 'cust.none': '(no customer)',
+    'sum.cust': '{a}/{b} customers', 'sum.stock': '{a} of {b} stock materials',
+    'tab.stock': 'Stock',
+    'stk.k1': 'Stock value', 'stk.k1sub': '{n} materials', 'stk.k2': 'thereof excess', 'stk.k3': 'thereof obsolete',
+    'stk.kShare': '{p} of stock value · {n} materials',
+    'stk.k4': 'Ordered despite excess', 'stk.k4sub': '{n} materials · excess {v}',
+    'stk.k4tip': 'Materials with excess stock that still have open purchase orders – click to show them in the table',
+    'stk.k5': 'Customers', 'stk.k5sub': '{p} of stock value assigned',
+    'stk.custTitle': 'Stock value by customer (top 15)', 'stk.grpTitle': 'Stock value by purchasing group (top 15)',
+    'stk.chartSub': 'Bar length = stock value · excess includes obsolete stock · click to filter',
+    'leg.stock': 'Stock value', 'leg.excess': 'Excess', 'leg.obsolete': 'thereof obsolete',
+    'tip.stock': 'Stock value: {v}', 'tip.excess': 'thereof excess: {v}', 'tip.obsolete': 'thereof obsolete: {v}',
+    'stk.tableTitle': 'Stock by material', 'stk.tableSub': 'ZMMSTOCK as of {d} · values in {c} · open orders from ZBK (filtered)',
+    'stk.f.all': 'All', 'stk.f.excess': 'With excess', 'stk.f.obsolete': 'Obsolete',
+    'stk.foot': '{n} materials · stock value {v}', 'stk.empty': 'No materials for this selection.',
+    'col.cust': 'Customer', 'col.stockQty': 'Stock', 'col.stockVal': 'Stock value {c}', 'col.excessVal': 'thereof excess {c}',
+    'col.obsoleteVal': 'thereof obsolete {c}', 'col.openOrders': 'Open orders {c}',
+    'col.stockExcess': 'Stock excess {c}', 'col.stockExcessTip': 'Excess value of the material according to ZMMSTOCK',
+    'file.stock': 'Procurement_Stock', 'sheet.stock': 'Stock',
+    'ov.capital': 'Tied-up capital', 'ov.capitalSub': 'stock {a} + open orders {b}',
+    'cap.title': 'Tied-up capital by customer (top 10)', 'cap.sub': 'Stock value + open order value in {c} · customer via material from ZMMSTOCK · click to filter',
+    'leg.capStock': 'Stock value', 'leg.capOrders': 'Open orders',
     'flt.btn': 'Filter and sort', 'flt.sortAsc': 'Sort ascending', 'flt.sortDesc': 'Sort descending',
     'flt.clear': 'Clear filter from “{c}”', 'flt.search': 'Search', 'flt.all': '(Select all)', 'flt.allResults': '(Select all search results)',
     'flt.empty': '(Blanks)', 'flt.ok': 'OK', 'flt.cancel': 'Cancel', 'flt.more': '… {n} more – use search', 'flt.noMatch': 'No matches',
@@ -1102,19 +1284,16 @@ function setLanguage(l) {
   try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
   applyStaticTranslations();
   clearTableFilters();      // Filterwerte sind formatiert (Datum, Zahlen, Status) → sprachabhängig
-  syncToggleLabel('grpList');
-  syncToggleLabel('meldList');
+  CHECK_LISTS.forEach(syncToggleLabel);
   if (lastError) showError(lastError.titleKey, lastError.html);
-  if (lastWarning) showWarning(lastWarning);
+  refreshWarnings();
+  updateStockUI();
+  updateT024UI();
   if (!state.rows.length) return;
   // geladene Daten in der neuen Sprache neu darstellen
-  $('dropTitle').textContent = state.fileName;
   updateReportUI();
-  $('meldList').querySelectorAll('.check-item').forEach((el, i) => {
-    const name = meldLabel(state.meldungen[i].name);
-    el.querySelector('.check-name').textContent = name;
-    el.querySelector('.check-name').title = name;
-  });
+  relabelList('meldList', state.meldungen, meldLabel);
+  relabelList('custList', state.kunden, custLabel);
   buildCurrencyChips();
   updateStichtagUI();
   applyFilters();
@@ -1123,7 +1302,7 @@ function setLanguage(l) {
 /* ═══════════════════════════════════════════════════
    KONSTANTEN
 ═══════════════════════════════════════════════════ */
-const C = { accent: '#6366f1', red: '#ef4444', gap: '#1b2537', text2: '#94a3b8', grid: 'rgba(148,163,184,0.12)' };
+const C = { accent: '#6366f1', red: '#ef4444', amber: '#f59e0b', teal: '#0d9488', gap: '#1b2537', text2: '#94a3b8', grid: 'rgba(148,163,184,0.12)' };
 const TABLE_LIMIT = 300;
 
 /* SAP-Ausnahmemeldungen: der Code ist sprachunabhängig (07/10/15/20) */
@@ -1255,6 +1434,31 @@ const FIELDS = {
   inco:       { names: ['Incoterms'], feat: 'feat.inco' },
 };
 
+/* T024 (Einkäufergruppen, optional) – Schlüssel → Name */
+const T024_FIELDS = {
+  code: { names: ['Einkäufergruppe', 'Purchasing Group', 'Purch. Group', 'EKGRP'], required: true },
+  name: { names: ['Bezeichnung EkGrp', 'Description p. group', 'Desc. p. group', 'Purch. Group Desc.', 'Purchasing Group Name',
+                  'Name Einkäufergrp', 'Purch. Group name', 'EKNAM'], required: true },
+  tel:  { names: ['Telefon EkGruppe', 'Tel.no. pur.group', 'Tel. No. Purch. Group', 'EKTEL'] },
+  mail: { names: ['E-Mail-Adresse', 'E-Mail Address', 'SMTP_ADDR'] },
+};
+
+/* ZMMSTOCK (Lagerbestand, optional) – eine Zeile je Material */
+const STOCK_FIELDS = {
+  material: { names: ['Material'], required: true },
+  total:    { names: ['Gesamtwert', 'Total Value'], required: true },
+  text:     { names: ['Materialkurztext', 'Material Description'] },
+  grpNr:    { names: ['Einkäufergruppe', 'Purchasing Group'] },
+  abc:      { names: ['ABC-Kennzeichen', 'ABC Indicator'] },
+  menge:    { names: ['Gesamtbestand', 'Total Stock'] },
+  me:       { names: ['Basismengeneinheit', 'Base Unit of Measure'] },
+  excess:   { names: ['Lagerwert Excess', 'Stockvalue Excess'], feat: 'feat.stockExcess' },
+  obsolete: { names: ['Lagerwert Obsolete', 'Stockvalue Obsolete'], feat: 'feat.stockExcess' },
+  ra:       { names: ['Reporting Account Name'], feat: 'feat.cust' },
+  raNr:     { names: ['Reporting Account'] },
+  waehrung: { names: ['Währung', 'Currency'] },
+};
+
 /* ═══════════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════════ */
@@ -1265,13 +1469,15 @@ const state = {
   hasOrigValues: false,
   stichtag: null, stichtagAuto: null, stichtagTs: null, stichtagManual: false,
   dateMin: null, dateMax: null,
-  grps: [], meldungen: [],
+  grps: [], kunden: [], meldungen: [],
+  stock: null, stockFiltered: [], stockQuick: 'all',
+  t024: null,
   view: 'overview',
   ampelStatus: 'all',
   action: '10',
 };
 const charts = {};
-let lastError = null, lastWarning = null;
+let lastError = null;
 const $ = id => document.getElementById(id);
 const cur = () => state.curMode === 'HW' ? state.hw : state.curMode;
 
@@ -1290,48 +1496,276 @@ $('sidebarToggle').addEventListener('click', () => {
 const dropZone  = $('dropZone');
 const fileInput = $('fileInput');
 
-dropZone.addEventListener('click', () => { if (!state.isReport) fileInput.click(); });
-dropZone.addEventListener('keydown', e => { if (!state.isReport && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); fileInput.click(); } });
-dropZone.addEventListener('dragover', e => { e.preventDefault(); if (!state.isReport) dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  if (!state.isReport && e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) processFile(e.target.files[0]);
-  fileInput.value = '';
+const stockZone  = $('stockZone');
+const stockInput = $('stockInput');
+const t024Zone   = $('t024Zone');
+const t024Input  = $('t024Input');
+
+/* Beide Felder nehmen jede Datei an – der Typ (ZBK / ZMMSTOCK) wird an den Spalten erkannt */
+[[dropZone, fileInput], [stockZone, stockInput], [t024Zone, t024Input]].forEach(([zone, input]) => {
+  zone.addEventListener('click', e => { if (!state.isReport && !e.target.closest('.drop-remove')) input.click(); });
+  zone.addEventListener('keydown', e => { if (!state.isReport && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); input.click(); } });
+  zone.addEventListener('dragover', e => { e.preventDefault(); if (!state.isReport) zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+  });
+  input.addEventListener('change', e => { handleFiles(e.target.files); input.value = ''; });
 });
 
-function processFile(file) {
+$('stockRemove').addEventListener('click', e => {
+  e.stopPropagation();
+  state.stock = null;
+  if (state.rows.length) { linkStock(); buildFilterLists(); applyFilters(); }
+  updateStockUI();
+  refreshWarnings();
+});
+
+$('t024Remove').addEventListener('click', e => {
+  e.stopPropagation();
+  state.t024 = null;
+  if (state.rows.length) { linkStock(); buildFilterLists(); applyFilters(); }
+  updateT024UI();
+});
+
+/** Einzeldatei (z. B. für Tests) */
+function processFile(file) { return handleFiles([file]); }
+
+async function handleFiles(fileList) {
   if (state.isReport) return;            // gespeicherter Report: Daten sind fix
+  const files = [...(fileList || [])];
+  if (!files.length) return;
   hideError();
-  hideWarning();
-  if (!/\.(xlsx|xls|xlsm)$/i.test(file.name)) {
-    showError('err.type', () => t('err.typeMsg', { f: escHtml(file.name) }));
+  showLoading(true);
+  await new Promise(r => setTimeout(r, 20));   // Spinner zeichnen lassen
+  try {
+    const parsed = [];
+    for (const f of files) {
+      if (!/\.(xlsx|xls|xlsm)$/i.test(f.name)) {
+        showError('err.type', () => t('err.typeMsg', { f: escHtml(f.name) }));
+        continue;
+      }
+      const aoa = await readSheet(f);
+      parsed.push({ name: f.name, aoa, kind: detectKind(aoa) });
+    }
+    // ZBK zuerst, damit eine gleichzeitig abgelegte ZMMSTOCK sofort verknüpft wird
+    parsed.sort((a, b) => (a.kind === 'zbk' ? 0 : 1) - (b.kind === 'zbk' ? 0 : 1));
+    for (const p of parsed) {
+      if (p.kind === 'zbk')        loadRows(p.aoa, p.name);
+      else if (p.kind === 'stock') loadStock(p.aoa, p.name);
+      else if (p.kind === 't024')  loadT024(p.aoa, p.name);
+      else showError('err.unknown', () => t('err.unknownMsg', { f: escHtml(p.name) }));
+    }
+  } catch (err) {
+    console.error(err);
+    const msg = err.i18n ? () => t(err.i18n) : () => escHtml(err.message);
+    showError('err.read', msg);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function readSheet(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: null, raw: true, blankrows: false }));
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(i18nError('err.readMsg'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/** Index der Kopfzeile (erste 10 Zeilen), die einen der Namen enthält – sonst -1 */
+function findHeaderRow(aoa, names) {
+  const ns = names.map(normHeader);
+  return aoa.slice(0, 10).findIndex(r => r && r.some(c => ns.includes(normHeader(c))));
+}
+
+function detectKind(aoa) {
+  if (!aoa.length) return 'unknown';
+  if (findHeaderRow(aoa, FIELDS.beleg.names) >= 0) return 'zbk';
+  // T024: Schlüssel + Bezeichnung der Einkäufergruppe, keine Materialspalte
+  const ti = findHeaderRow(aoa, T024_FIELDS.name.names);
+  if (ti >= 0) {
+    const h = aoa[ti].map(normHeader);
+    const has = names => names.some(n => h.includes(normHeader(n)));
+    if (has(T024_FIELDS.code.names) && !has(STOCK_FIELDS.material.names)) return 't024';
+  }
+  // ZMMSTOCK: "Gesamtwert" plus mindestens eine typische Spalte (fehlende Pflichtspalten meldet loadStock)
+  const i = findHeaderRow(aoa, STOCK_FIELDS.total.names);
+  const typical = ['material', 'excess', 'obsolete', 'ra'].flatMap(k => STOCK_FIELDS[k].names).map(normHeader);
+  if (i >= 0 && aoa[i].some(c => typical.includes(normHeader(c)))) return 'stock';
+  return 'unknown';
+}
+
+/** Fehlertext "Pflichtspalten fehlen" mit DE/EN-Namen */
+function missingColumnsHtml(fileName, missing, hintKey) {
+  return t('err.missingMsg', { f: escHtml(fileName) }) +
+    '<ul>' + missing.map(n => '<li>' + (lang === 'de' ? n : [...n].reverse()).map(x => `<code>${escHtml(x)}</code>`).join(' / ') + '</li>').join('') + '</ul>' +
+    `<p style="margin-top:6px">${t(hintKey)}</p>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   ZMMSTOCK – Lagerbestand je Material
+   Regel (verifiziert): mit Obsolete gilt Obsolete = Excess = Gesamtwert,
+   ohne Obsolete ist Excess ein Teil des Gesamtwerts.
+═══════════════════════════════════════════════════ */
+function loadStock(aoa, fileName) {
+  const hIdx = findHeaderRow(aoa, STOCK_FIELDS.total.names);
+  const header = aoa[hIdx];
+  const data = aoa.slice(hIdx + 1).filter(r => r && r.some(v => v !== null && v !== ''));
+  const H = resolveColumns(header, STOCK_FIELDS);
+
+  const missing = Object.entries(STOCK_FIELDS).filter(([k, d]) => d.required && H[k] === null).map(([, d]) => d.names);
+  if (missing.length) {
+    showError('err.stockMissing', () => missingColumnsHtml(fileName, missing, 'err.stockMissingHint'));
     return;
   }
-  showLoading(true);
-  const reader = new FileReader();
-  reader.onload = e => {
-    setTimeout(() => {
-      try {
-        const wb  = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-        const ws  = wb.Sheets[wb.SheetNames[0]];
-        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true, blankrows: false });
-        loadRows(aoa, file.name);
-      } catch (err) {
-        console.error(err);
-        const msg = err.i18n ? () => t(err.i18n) : () => escHtml(err.message);
-        showError('err.read', msg);
-      } finally {
-        showLoading(false);
-      }
-    }, 20);
+  const featMissing = new Map();
+  for (const [k, d] of Object.entries(STOCK_FIELDS)) {
+    if (H[k] !== null || !d.feat) continue;
+    if (!featMissing.has(d.feat)) featMissing.set(d.feat, []);
+    featMissing.get(d.feat).push(d.names);
+  }
+
+  const str = v => (v === null || v === undefined) ? '' : String(v).trim();
+  const num = (r, c) => c !== null ? toNumber(r[c]) : 0;
+  const byMat = new Map();
+  for (const r of data) {
+    const m = str(r[H.material]);
+    if (!m) continue;
+    let s = byMat.get(m);
+    if (!s) {
+      s = { material: m, text: H.text !== null ? str(r[H.text]) : '', grpNr: H.grpNr !== null ? normGrp(r[H.grpNr]) : '',
+            abc: H.abc !== null ? str(r[H.abc]) : '', me: H.me !== null ? str(r[H.me]) : '',
+            ra: H.ra !== null ? str(r[H.ra]) : '', raNr: H.raNr !== null ? str(r[H.raNr]) : '',
+            menge: 0, total: 0, excess: 0, obsolete: 0 };
+      byMat.set(m, s);
+    }
+    s.menge    += num(r, H.menge);
+    s.total    += num(r, H.total);
+    s.excess   += num(r, H.excess);
+    s.obsolete += num(r, H.obsolete);
+  }
+  if (!byMat.size) throw i18nError('err.stockNoRows');
+
+  const curRow = H.waehrung !== null && data.find(r => str(r[H.waehrung]));
+  state.stock = { rows: [...byMat.values()], byMat, fileName, stamp: parseFileStamp(fileName), featMissing,
+                  cur: curRow ? str(curRow[H.waehrung]) : null };
+  if (state.rows.length) { linkStock(); buildFilterLists(); applyFilters(); }
+  updateStockUI();
+  refreshWarnings();
+}
+
+/** Einkäufergruppen-Schlüssel vereinheitlichen: Excel verschluckt führende Nullen (1 → 001) */
+function normGrp(v) {
+  const s = v === null || v === undefined ? '' : String(v).trim();
+  return /^\d{1,2}$/.test(s) ? s.padStart(3, '0') : s;
+}
+
+/* ═══════════════════════════════════════════════════
+   T024 – Einkäufergruppen (optional)
+═══════════════════════════════════════════════════ */
+const NOT_IN_USE = /^not in use$/i;
+
+function loadT024(aoa, fileName) {
+  const hIdx = findHeaderRow(aoa, T024_FIELDS.name.names);
+  const H = resolveColumns(aoa[hIdx], T024_FIELDS);
+  const missing = Object.entries(T024_FIELDS).filter(([k, d]) => d.required && H[k] === null).map(([, d]) => d.names);
+  if (missing.length) {
+    showError('err.t024Missing', () => missingColumnsHtml(fileName, missing, 'err.t024MissingHint'));
+    return;
+  }
+  const str = v => (v === null || v === undefined) ? '' : String(v).trim();
+  const map = new Map();
+  for (const r of aoa.slice(hIdx + 1)) {
+    if (!r) continue;
+    const code = normGrp(r[H.code]);
+    const name = str(r[H.name]);
+    if (!code || !name) continue;
+    map.set(code, { name, tel: H.tel !== null ? str(r[H.tel]) : '', mail: H.mail !== null ? str(r[H.mail]) : '' });
+  }
+  if (!map.size) throw i18nError('err.t024NoRows');
+  state.t024 = { map, fileName };
+  if (state.rows.length) { linkStock(); buildFilterLists(); applyFilters(); }
+  updateT024UI();
+}
+
+/** Name je Einkäufergruppe: T024 → ZBK-Spalte "Name Einkäufergrp" → häufigster ZBK-Name zum Schlüssel → Schlüssel.
+ *  "NOT IN USE" aus der T024 gilt nicht als Name. */
+function resolveGroups() {
+  const t024 = state.t024 ? state.t024.map : null;
+  const zbk = new Map();
+  state.rows.forEach(r => {
+    if (!r.einkgrpNr || !r.einkgrpZbk) return;
+    const m = zbk.get(r.einkgrpNr) || new Map();
+    m.set(r.einkgrpZbk, (m.get(r.einkgrpZbk) || 0) + 1);
+    zbk.set(r.einkgrpNr, m);
+  });
+  const zbkName = code => { const m = zbk.get(code); return m ? [...m].sort((a, b) => b[1] - a[1])[0][0] : ''; };
+  const nameOf = (code, own) => {
+    const e = t024 && t024.get(code);
+    if (e && e.name && !NOT_IN_USE.test(e.name)) return e.name;
+    return own || zbkName(code) || code || '—';
   };
-  reader.onerror = () => { showLoading(false); showError('err.read', () => t('err.readMsg')); };
-  reader.readAsArrayBuffer(file);
+  state.rows.forEach(r => r.einkgrp = nameOf(r.einkgrpNr, r.einkgrpZbk));
+  if (state.stock) state.stock.rows.forEach(x => x.einkgrp = nameOf(x.grpNr, ''));
+}
+
+function updateT024UI() {
+  const tt = state.t024;
+  t024Zone.classList.toggle('loaded', !!tt);
+  $('t024Icon').textContent = tt && !state.isReport ? '✓' : '👥';
+  $('t024Hint').innerHTML = tt
+    ? `<span class="drop-file" title="${escHtml(tt.fileName)}">${escHtml(tt.fileName)}</span>` + escHtml(t('t024.groups', { n: fmtInt(tt.map.size) }))
+    : escHtml(t('drop.hint'));
+  $('t024Remove').hidden = !tt || !!state.isReport;
+}
+
+/** ZBK ↔ ZMMSTOCK verknüpfen: Kunde je Bestellzeile; Gruppennamen für ZBK und Lager auflösen */
+function linkStock() {
+  resolveGroups();
+  const st = state.stock;
+  if (!st) { state.rows.forEach(r => { r.kunde = ''; r.stk = null; }); return; }
+  state.rows.forEach(r => { const s = st.byMat.get(r.material); r.stk = s || null; r.kunde = s ? s.ra : ''; });
+}
+
+function updateStockUI() {
+  const st = state.stock;
+  stockZone.classList.toggle('loaded', !!st);
+  $('stockIcon').textContent = st && !state.isReport ? '✓' : '📦';
+  $('stockHint').innerHTML = st
+    ? `<span class="drop-file" title="${escHtml(st.fileName)}">${escHtml(st.fileName)}</span>` +
+      escHtml(t('stock.mats', { n: fmtInt(st.rows.length) }) + (state.rows.length ? '' : ' · ' + t('stock.waiting')))
+    : escHtml(t('drop.hint'));
+  $('stockRemove').hidden = !st || !!state.isReport;
+  $('stockTab').hidden = !st;
+  $('custSection').hidden = !st;
+  if (!st && state.view === 'stock') document.querySelector('[data-view="overview"]').click();
+}
+
+/** Hinweise: fehlende optionale Spalten (ZBK + ZMMSTOCK) und abweichende Stände */
+function refreshWarnings() {
+  const items = [];
+  const add = fm => fm && fm.forEach((names, feat) => items.push(
+    `<li>${t('warn.feature', { cols: names.map(n => `<code>${escHtml(n[lang === 'de' ? 0 : 1] || n[0])}</code>`).join(', '), feat: escHtml(t(feat)) })}</li>`));
+  if (state.rows.length) add(state.featMissing);
+  if (state.stock) add(state.stock.featMissing);
+  const notes = [];
+  const sd = state.stock && state.stock.stamp.d;
+  if (sd && state.rows.length && state.stichtagTs && Math.abs(daysBetween(sd, state.stichtagAuto)) > 3) {
+    notes.push(`<li>${escHtml(t('warn.stockDate', { a: fmtDate(sd), b: fmtDate(state.stichtagAuto) }))}</li>`);
+  }
+  if (!items.length && !notes.length) { $('warnBox').hidden = true; return; }
+  $('warnBox').innerHTML = (items.length ? `<strong>${escHtml(t('warn.optional'))}</strong><ul>${items.join('')}</ul>` : '') +
+                           (notes.length ? `<ul>${notes.join('')}</ul>` : '');
+  $('warnBox').hidden = false;
 }
 
 function i18nError(key) { const e = new Error(key); e.i18n = key; return e; }
@@ -1339,7 +1773,7 @@ function i18nError(key) { const e = new Error(key); e.i18n = key; return e; }
 const normHeader = s => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 
 /** Spaltenindizes je Feld ermitteln – unabhängig von Reihenfolge und Sprache */
-function resolveColumns(headers) {
+function resolveColumns(headers, fields = FIELDS) {
   const idx = new Map();
   headers.forEach((h, i) => {
     const k = normHeader(h);
@@ -1348,7 +1782,7 @@ function resolveColumns(headers) {
     idx.get(k).push(i);
   });
   const H = {};
-  for (const [field, def] of Object.entries(FIELDS)) {
+  for (const [field, def] of Object.entries(fields)) {
     let found = [];
     for (const n of def.names) { const hit = idx.get(normHeader(n)); if (hit) { found = hit; break; } }
     H[field] = def.multi ? found : (found.length ? found[0] : null);
@@ -1463,7 +1897,9 @@ function loadRows(aoa, fileName) {
         betragOrig:  H.orig !== null ? toNumber(r[H.orig]) : 0,
         waehrung:    curCol !== null ? str(r[curCol]) : '',
         ab:          H.ab !== null ? str(r[H.ab]) : '',
-        einkgrp:     (H.einkgrp !== null && str(r[H.einkgrp])) || (H.einkgrpNr !== null && str(r[H.einkgrpNr])) || '—',
+        einkgrp:     '',                                             // wird in resolveGroups() gesetzt
+        einkgrpZbk:  H.einkgrp !== null ? str(r[H.einkgrp]) : '',
+        einkgrpNr:   H.einkgrpNr !== null ? normGrp(r[H.einkgrpNr]) : '',
         kreditor:    H.kreditor !== null ? str(r[H.kreditor]) : '',
         lieferant:   (H.lieferant !== null && str(r[H.lieferant])) || (H.kreditor !== null && str(r[H.kreditor])) || '—',
         material:    H.material !== null ? str(r[H.material]) : '',
@@ -1503,21 +1939,12 @@ function activateData(fileName) {
   state.dateMin = times.length ? new Date(times.reduce((a, b) => Math.min(a, b))) : null;
   state.dateMax = times.length ? new Date(times.reduce((a, b) => Math.max(a, b))) : null;
 
-  state.grps     = countBy(state.rows, r => r.einkgrp).sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  state.meldungen = countBy(state.rows, r => r.meldung).sort((a, b) => meldRank(a.name) - meldRank(b.name) || a.name.localeCompare(b.name, 'de'));
-
-  buildCheckList('grpList', state.grps, x => x);
-  buildCheckList('meldList', state.meldungen, meldLabel);
+  linkStock();
+  buildFilterLists();
   buildCurrencyChips();
-  $('grpSearch').value = '';
   $('searchInput').value = '';
   setDateRange(state.dateMin, state.dateMax);
   markPreset('all');
-
-  if (state.featMissing && state.featMissing.size) {
-    lastWarning = state.featMissing;
-    showWarning(state.featMissing);
-  }
 
   $('filePill').textContent = '📄 ' + fileName;
   $('filePill').title = fileName;
@@ -1526,8 +1953,10 @@ function activateData(fileName) {
   dropZone.classList.add('loaded');
   if (!state.isReport) $('dropIcon').textContent = '✓';
   state.fileName = fileName;
-  $('dropTitle').textContent = fileName;
   updateReportUI();
+  updateStockUI();
+  updateT024UI();
+  refreshWarnings();
 
   $('emptyState').style.display = 'none';
   $('dashboard').hidden = false;
@@ -1542,10 +1971,11 @@ function activateData(fileName) {
    Bibliotheken → eine einzelne HTML-Datei, offline lauffähig. Das Original
    bleibt unverändert; im Report kann weiterhin Excel geladen werden.
 ═══════════════════════════════════════════════════ */
-const ROW_FIELDS  = ['beleg', 'pos', 'eint', 'lieferdatum', 'belegdatum', 'betragHW', 'betragOrig', 'waehrung', 'ab', 'einkgrp',
+const ROW_FIELDS  = ['beleg', 'pos', 'eint', 'lieferdatum', 'belegdatum', 'betragHW', 'betragOrig', 'waehrung', 'ab', 'einkgrp', 'einkgrpNr', 'einkgrpZbk',
                      'kreditor', 'lieferant', 'material', 'kurztext', 'hersteller', 'mpn', 'abc', 'menge', 'me', 'meldung',
                      'umterm', 'diff', 'excess', 'zbed', 'term', 'inco'];
 const DATE_FIELDS = new Set(['lieferdatum', 'belegdatum', 'umterm']);
+const STOCK_SER   = ['material', 'text', 'grpNr', 'abc', 'menge', 'me', 'total', 'excess', 'obsolete', 'ra', 'raNr'];
 
 /** Lokale Zeit als "JJJJ-MM-TT HH:MM" – zeitzonenneutral für Kollegen an anderen Standorten */
 const toLocalStamp   = d => d ? toInputDate(d) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) : null;
@@ -1576,6 +2006,16 @@ function serializeData() {
     stichtagTs: toLocalStamp(state.stichtagTs),
     stichtagManual: state.stichtagManual,
     featMissing: state.featMissing ? [...state.featMissing] : [],
+    stock: state.stock ? {
+      fileName: state.stock.fileName,
+      stamp: toLocalStamp(state.stock.stamp.ts || state.stock.stamp.d),
+      hasTime: !!state.stock.stamp.ts,
+      cur: state.stock.cur,
+      featMissing: [...state.stock.featMissing],
+      fields: STOCK_SER,
+      rows: state.stock.rows.map(x => STOCK_SER.map(f => x[f] === '' ? null : x[f])),
+    } : null,
+    t024: state.t024 ? { fileName: state.t024.fileName, rows: [...state.t024.map].map(([c, e]) => [c, e.name, e.tel, e.mail]) } : null,
     fields: ROW_FIELDS,
     terms,
     rows,
@@ -1595,6 +2035,7 @@ function loadEmbedded(p) {
     }
     for (const f of ['betragHW', 'betragOrig', 'menge', 'excess']) r[f] = +r[f] || 0;
     if (idx.einkgrp === undefined && idx.dispo !== undefined) r.einkgrp = a[idx.dispo] || '—';   // Reports vor der Umstellung
+    if (!r.einkgrpZbk && r.einkgrp !== '—') r.einkgrpZbk = r.einkgrp;                            // Reports vor T024
     r.key = r.beleg + '-' + r.pos;
     return r;
   });
@@ -1606,6 +2047,29 @@ function loadEmbedded(p) {
   state.stichtagManual = !!p.stichtagManual;
   state.stichtag = fromInputDate(p.stichtag) || state.stichtagAuto;
   state.report = { created: fromLocalStamp(p.created), fileName: p.fileName };
+  if (p.stock) {
+    const si = Object.fromEntries(p.stock.fields.map((f, i) => [f, i]));
+    const rows = p.stock.rows.map(a => {
+      const x = {};
+      for (const f of STOCK_SER) { const v = si[f] !== undefined ? a[si[f]] : null; x[f] = v === null || v === undefined ? '' : v; }
+      for (const f of ['menge', 'total', 'excess', 'obsolete']) x[f] = +x[f] || 0;
+      return x;
+    });
+    const st = fromLocalStamp(p.stock.stamp);
+    state.stock = { rows, byMat: new Map(rows.map(x => [x.material, x])), fileName: p.stock.fileName,
+                    stamp: { d: st ? new Date(st.getFullYear(), st.getMonth(), st.getDate()) : null, ts: p.stock.hasTime ? st : null },
+                    featMissing: new Map(p.stock.featMissing || []), cur: p.stock.cur };
+  } else {
+    stockZone.hidden = true;
+  }
+  stockInput.remove();
+  stockZone.removeAttribute('role');
+  stockZone.removeAttribute('tabindex');
+  if (p.t024) state.t024 = { fileName: p.t024.fileName, map: new Map(p.t024.rows.map(a => [a[0], { name: a[1] || '', tel: a[2] || '', mail: a[3] || '' }])) };
+  else t024Zone.hidden = true;
+  t024Input.remove();
+  t024Zone.removeAttribute('role');
+  t024Zone.removeAttribute('tabindex');
   state.isReport = true;
   document.body.classList.add('report-mode');
   $('fileInput').remove();
@@ -1624,9 +2088,8 @@ function updateReportUI() {
     $('reportPill').textContent = t('report.pill', { d: fmtDateTime(rep.created) });
     $('reportPill').title = t('report.pillTip', { f: rep.fileName });
   }
-  $('dropHint').textContent = rep
-    ? t('report.dropHint', { n: fmtInt(state.rows.length), d: fmtDateTime(rep.created) })
-    : t('drop.loadedHint', { n: fmtInt(state.rows.length) });
+  $('dropHint').innerHTML = `<span class="drop-file" title="${escHtml(state.fileName)}">${escHtml(state.fileName)}</span>` +
+    escHtml(rep ? t('report.dropHint', { n: fmtInt(state.rows.length), d: fmtDateTime(rep.created) }) : t('drop.rows', { n: fmtInt(state.rows.length) }));
   if (state.isReport) $('fileLabel').textContent = t('report.side');
 }
 
@@ -1696,17 +2159,17 @@ async function saveReport() {
    STICHTAG – aus dem Zeitstempel im Dateinamen
    (SAP-Standard: EXPORT_JJJJMMTT_HHMMSS), sonst heute
 ═══════════════════════════════════════════════════ */
-function detectStichtag(fileName) {
+/** Zeitstempel aus dem Dateinamen (EXPORT_JJJJMMTT_HHMMSS) → { d: Tag, ts: Zeitpunkt|null } */
+function parseFileStamp(fileName) {
   const m = fileName.match(/(20\d{2})(\d{2})(\d{2})[_\-]?(\d{2})?(\d{2})?(\d{2})?/);
-  let d = null, ts = null;
-  if (m) {
-    const cand = new Date(+m[1], +m[2] - 1, +m[3]);
-    if (cand.getFullYear() === +m[1] && cand.getMonth() === +m[2] - 1 && cand.getDate() === +m[3]) {
-      d = cand;
-      ts = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
-      if (!m[4]) ts = null;
-    }
-  }
+  if (!m) return { d: null, ts: null };
+  const cand = new Date(+m[1], +m[2] - 1, +m[3]);
+  if (cand.getFullYear() !== +m[1] || cand.getMonth() !== +m[2] - 1 || cand.getDate() !== +m[3]) return { d: null, ts: null };
+  return { d: cand, ts: m[4] ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +(m[5] || 0), +(m[6] || 0)) : null };
+}
+
+function detectStichtag(fileName) {
+  const { d, ts } = parseFileStamp(fileName);
   state.stichtagAuto = d || startOfToday();
   state.stichtagTs   = d ? (ts || d) : null;
   state.stichtagManual = false;
@@ -1799,6 +2262,31 @@ function paymentOf(r, skonto) {
 /* ═══════════════════════════════════════════════════
    FILTER-UI
 ═══════════════════════════════════════════════════ */
+/** Filterlisten Einkäufergruppe, Kunde (nur mit ZMMSTOCK) und Ausnahmemeldung aufbauen */
+function buildFilterLists() {
+  const st = state.stock;
+  const grp = new Map();
+  state.rows.forEach(r => grp.set(r.einkgrp, (grp.get(r.einkgrp) || 0) + 1));
+  if (st) st.rows.forEach(x => { if (!grp.has(x.einkgrp)) grp.set(x.einkgrp, 0); });   // Gruppen nur im Lager
+  state.grps = [...grp].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+  state.kunden = [];
+  if (st) {
+    const k = new Map();
+    st.rows.forEach(x => k.set(x.ra, (k.get(x.ra) || 0) + 1));     // Anzahl Lagermaterialien je Kunde
+    state.rows.forEach(r => { if (!k.has(r.kunde)) k.set(r.kunde, 0); });
+    state.kunden = [...k].map(([name, count]) => ({ name, count }))
+      .sort((a, b) => (a.name === '') - (b.name === '') || a.name.localeCompare(b.name, 'de'));
+  }
+  state.meldungen = countBy(state.rows, r => r.meldung).sort((a, b) => meldRank(a.name) - meldRank(b.name) || a.name.localeCompare(b.name, 'de'));
+
+  buildCheckList('grpList', state.grps, x => x);
+  buildCheckList('custList', state.kunden, custLabel);
+  buildCheckList('meldList', state.meldungen, meldLabel);
+  $('grpSearch').value = '';
+  $('custSearch').value = '';
+}
+
 function buildCheckList(listId, items, labelFn) {
   $(listId).innerHTML = items.map((it, i) => {
     const label = labelFn(it.name);
@@ -1806,7 +2294,7 @@ function buildCheckList(listId, items, labelFn) {
     <label class="check-item" data-name="${escHtml(label.toLowerCase())}">
       <input type="checkbox" data-idx="${i}" checked />
       <span class="check-name" title="${escHtml(label)}">${escHtml(label)}</span>
-      <span class="check-count">${fmtInt(it.count)}</span>
+      <span class="check-count">${it.count ? fmtInt(it.count) : ''}</span>
     </label>`;
   }).join('');
   syncToggleLabel(listId);
@@ -1817,7 +2305,7 @@ function selectedNames(listId, items) {
 }
 
 function syncToggleLabel(listId) {
-  const btn = $(listId === 'grpList' ? 'grpToggle' : 'meldToggle');
+  const btn = $({ grpList: 'grpToggle', custList: 'custToggle', meldList: 'meldToggle' }[listId]);
   const boxes = [...$(listId).querySelectorAll('.check-item:not(.hidden) input')];
   btn.textContent = !boxes.length || boxes.every(c => c.checked) ? t('btn.allOff') : t('btn.allOn');
 }
@@ -1830,15 +2318,29 @@ function toggleAll(listId) {
   applyFilters();
 }
 
-['grpList', 'meldList'].forEach(id => $(id).addEventListener('change', () => { syncToggleLabel(id); applyFilters(); }));
+const CHECK_LISTS = ['grpList', 'custList', 'meldList'];
+CHECK_LISTS.forEach(id => $(id).addEventListener('change', () => { syncToggleLabel(id); applyFilters(); }));
 $('grpToggle').addEventListener('click',  () => toggleAll('grpList'));
+$('custToggle').addEventListener('click', () => toggleAll('custList'));
 $('meldToggle').addEventListener('click', () => toggleAll('meldList'));
 
-$('grpSearch').addEventListener('input', e => {
+[['grpSearch', 'grpList'], ['custSearch', 'custList']].forEach(([inp, list]) => $(inp).addEventListener('input', e => {
   const q = e.target.value.toLowerCase().trim();
-  $('grpList').querySelectorAll('.check-item').forEach(el => el.classList.toggle('hidden', q && !el.dataset.name.includes(q)));
-  syncToggleLabel('grpList');
-});
+  $(list).querySelectorAll('.check-item').forEach(el => el.classList.toggle('hidden', q && !el.dataset.name.includes(q)));
+  syncToggleLabel(list);
+}));
+
+const custLabel = k => k || t('cust.none');
+
+/** Beschriftungen einer Checkliste nach Sprachwechsel neu setzen (Haken bleiben) */
+function relabelList(listId, items, labelFn) {
+  $(listId).querySelectorAll('.check-item').forEach((el, i) => {
+    const name = labelFn(items[i].name);
+    el.dataset.name = name.toLowerCase();
+    el.querySelector('.check-name').textContent = name;
+    el.querySelector('.check-name').title = name;
+  });
+}
 
 let searchTimer;
 $('searchInput').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(applyFilters, 150); });
@@ -1898,12 +2400,13 @@ $('currencyChips').addEventListener('click', e => {
 
 $('resetBtn').addEventListener('click', () => {
   if (!state.rows.length) return;
-  ['grpList', 'meldList'].forEach(id => {
+  CHECK_LISTS.forEach(id => {
     $(id).querySelectorAll('.check-item').forEach(el => el.classList.remove('hidden'));
     $(id).querySelectorAll('input').forEach(c => c.checked = true);
     syncToggleLabel(id);
   });
   $('grpSearch').value = '';
+  $('custSearch').value = '';
   $('searchInput').value = '';
   state.curMode = 'HW';
   markCurrency();
@@ -1918,6 +2421,7 @@ $('resetBtn').addEventListener('click', () => {
 function applyFilters() {
   if (!state.rows.length) return;
   const grps   = selectedNames('grpList', state.grps);
+  const custs  = state.stock ? selectedNames('custList', state.kunden) : null;
   const melds  = selectedNames('meldList', state.meldungen);
   const from   = fromInputDate($('dateFrom').value);
   const to     = fromInputDate($('dateTo').value);
@@ -1929,13 +2433,14 @@ function applyFilters() {
   state.filtered = state.rows.filter(r => {
     if (!hw && r.waehrung !== state.curMode) return false;
     if (!grps.has(r.einkgrp)) return false;
+    if (custs && !custs.has(r.kunde)) return false;
     if (!melds.has(r.meldung)) return false;
     if (r.lieferdatum) {
       if (from && r.lieferdatum < from) return false;
       if (to   && r.lieferdatum > to)   return false;
     }
     if (q) {
-      const hay = (r.lieferant + ' ' + r.kreditor + ' ' + r.material + ' ' + r.kurztext + ' ' + r.beleg + ' ' + r.ab + ' ' + r.hersteller + ' ' + r.mpn).toLowerCase();
+      const hay = (r.lieferant + ' ' + r.kreditor + ' ' + r.material + ' ' + r.kurztext + ' ' + r.beleg + ' ' + r.ab + ' ' + r.hersteller + ' ' + r.mpn + ' ' + (r.kunde || '')).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -1946,15 +2451,32 @@ function applyFilters() {
     r.status = !r.lieferdatum ? 'ok' : r.lieferdatum < ref ? 'overdue' : r.lieferdatum <= in7 ? 'soon' : 'ok';
   });
 
-  renderSummary(grps, melds, q);
+  // Lager: Einkäufergruppe, Kunde und Suche gelten auch hier; offene Bestellungen je Material aus der gefilterten ZBK
+  if (state.stock) {
+    state.stockFiltered = state.stock.rows.filter(x =>
+      grps.has(x.einkgrp) && custs.has(x.ra) &&
+      (!q || (x.material + ' ' + x.text + ' ' + x.ra + ' ' + x.einkgrp).toLowerCase().includes(q)));
+    const open = new Map(), next = new Map();
+    state.filtered.forEach(r => {
+      open.set(r.material, (open.get(r.material) || 0) + r.betragHW);
+      if (r.lieferdatum && (!next.has(r.material) || r.lieferdatum < next.get(r.material))) next.set(r.material, r.lieferdatum);
+    });
+    state.stock.rows.forEach(x => { x.open = open.get(x.material) || 0; x.next = next.get(x.material) || null; });
+  } else {
+    state.stockFiltered = [];
+  }
+
+  renderSummary(grps, melds, q, custs);
   render();
 }
 
-function renderSummary(grps, melds, q) {
+function renderSummary(grps, melds, q, custs) {
   const parts = [t('sum.rows', { n: fmtInt(state.filtered.length), t: fmtInt(state.rows.length) })];
   if (state.curMode !== 'HW')              parts.push(escHtml(t('sum.cur', { c: state.curMode })));
   if (grps.size < state.grps.length)       parts.push(t('sum.grp', { a: grps.size, b: state.grps.length }));
   if (melds.size < state.meldungen.length) parts.push(t('sum.meld', { a: melds.size, b: state.meldungen.length }));
+  if (custs && custs.size < state.kunden.length) parts.push(t('sum.cust', { a: custs.size, b: state.kunden.length }));
+  if (state.stock) parts.push(t('sum.stock', { a: fmtInt(state.stockFiltered.length), b: fmtInt(state.stock.rows.length) }));
   if (q) parts.push(escHtml(t('sum.search', { q })));
   $('filterSummary').innerHTML = parts.join(' · ');
 }
@@ -1977,6 +2499,7 @@ function render() {
   else if (state.view === 'actions')  renderActions();
   else if (state.view === 'payments') renderPayments();
   else if (state.view === 'material') renderMaterial();
+  else if (state.view === 'stock' && state.stock) renderStock();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1988,8 +2511,112 @@ function renderOverview() {
   renderAB();
   renderMeldChart();
   renderSupplierChart();
+  renderStockOverview();
   tables.ampel.render();
 }
+
+/* Übersicht: Lager-Kacheln + Gebundenes Kapital je Kunde (nur mit ZMMSTOCK, Hauswährung) */
+function renderStockOverview() {
+  const show = !!state.stock && state.curMode === 'HW';
+  $('stockKpis').hidden = !show;
+  $('capCard').hidden = !show;
+  if (!show) return;
+  const rows = state.stockFiltered, c = state.hw;
+  const tot = sum(rows, x => x.total), ex = sum(rows, x => x.excess), ob = sum(rows, x => x.obsolete);
+  const open = sum(state.filtered, r => r.betragHW);
+  setKpi('ovStock', fmtCompact(tot), c, fmtMoney(tot) + ' ' + c);
+  $('ovStockSub').textContent = t('stk.k1sub', { n: fmtInt(rows.length) });
+  setKpi('ovExcess', fmtCompact(ex), c, fmtMoney(ex) + ' ' + c);
+  $('ovExcessSub').textContent = t('stk.kShare', { p: pct(ex, tot), n: fmtInt(rows.filter(x => x.excess > 0).length) });
+  setKpi('ovObsolete', fmtCompact(ob), c, fmtMoney(ob) + ' ' + c);
+  $('ovObsoleteSub').textContent = t('stk.kShare', { p: pct(ob, tot), n: fmtInt(rows.filter(x => x.obsolete > 0).length) });
+  setKpi('ovCapital', fmtCompact(tot + open), c, fmtMoney(tot + open) + ' ' + c);
+  $('ovCapitalSub').textContent = t('ov.capitalSub', { a: fmtCompact(tot), b: fmtCompact(open) });
+
+  const m = new Map();
+  const g = k => { if (!m.has(k)) m.set(k, { name: k, stock: 0, open: 0 }); return m.get(k); };
+  rows.forEach(x => g(x.ra).stock += x.total);
+  state.filtered.forEach(r => g(r.kunde).open += r.betragHW);
+  const top = [...m.values()].sort((a, b) => (b.stock + b.open) - (a.stock + a.open)).slice(0, 10);
+  $('capSub').textContent = t('cap.sub', { c });
+  hStackChart('capChart',
+    top.map(a => ({ label: truncate(custLabel(a.name), 28), title: custLabel(a.name) })),
+    [{ label: t('leg.capStock'), color: C.accent, data: top.map(a => a.stock) },
+     { label: t('leg.capOrders'), color: C.teal, data: top.map(a => a.open) }],
+    i => [` ${t('leg.capStock')}: ${fmtMoney(top[i].stock)} ${c}`, ` ${t('leg.capOrders')}: ${fmtMoney(top[i].open)} ${c}`,
+          ` ${t('total')}: ${fmtMoney(top[i].stock + top[i].open)} ${c}`],
+    i => soloCheck('custList', state.kunden, top[i].name));
+}
+
+/* ═══════════════════════════════════════════════════
+   LAGER (ZMMSTOCK)
+═══════════════════════════════════════════════════ */
+function stockTableRows() {
+  const q = state.stockQuick;
+  return state.stockFiltered.filter(x =>
+    q === 'all' ? true : q === 'excess' ? x.excess > 0 : q === 'obsolete' ? x.obsolete > 0 : (x.excess > 0 && x.open > 0));
+}
+
+function renderStock() {
+  const rows = state.stockFiltered, c = state.stock.cur || state.hw;
+  const tot = sum(rows, x => x.total), ex = sum(rows, x => x.excess), ob = sum(rows, x => x.obsolete);
+  const ord = rows.filter(x => x.excess > 0 && x.open > 0);
+  setKpi('stkVal', fmtCompact(tot), c, fmtMoney(tot) + ' ' + c);
+  $('stkValSub').textContent = t('stk.k1sub', { n: fmtInt(rows.length) });
+  setKpi('stkEx', fmtCompact(ex), c, fmtMoney(ex) + ' ' + c);
+  $('stkExSub').textContent = t('stk.kShare', { p: pct(ex, tot), n: fmtInt(rows.filter(x => x.excess > 0).length) });
+  setKpi('stkOb', fmtCompact(ob), c, fmtMoney(ob) + ' ' + c);
+  $('stkObSub').textContent = t('stk.kShare', { p: pct(ob, tot), n: fmtInt(rows.filter(x => x.obsolete > 0).length) });
+  const ordVal = sum(ord, x => x.open);
+  setKpi('stkOrd', fmtCompact(ordVal), state.hw, fmtMoney(ordVal) + ' ' + state.hw);
+  $('stkOrdSub').textContent = t('stk.k4sub', { n: fmtInt(ord.length), v: fmtCompact(sum(ord, x => x.excess)) });
+  $('stkOrdTile').classList.toggle('selected', state.stockQuick === 'ordered');
+  setKpi('stkCust', fmtInt(new Set(rows.map(x => x.ra).filter(Boolean)).size));
+  $('stkCustSub').textContent = t('stk.k5sub', { p: pct(sum(rows.filter(x => x.ra), x => x.total), tot) });
+
+  stockStackChart('stkCustChart', rows, x => x.ra, custLabel, c, name => soloCheck('custList', state.kunden, name));
+  stockStackChart('stkGrpChart', rows, x => x.einkgrp, x => x, c, name => soloCheck('grpList', state.grps, name));
+
+  const sd = state.stock.stamp.ts ? fmtDateTime(state.stock.stamp.ts) : state.stock.stamp.d ? fmtDate(state.stock.stamp.d) : '—';
+  $('stkTableSub').textContent = t('stk.tableSub', { d: sd, c });
+  $('stockQuick').querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.sq === state.stockQuick));
+  tables.stock.render();
+}
+
+/** Ein Balken je Gruppe: Länge = Lagerwert, darin Excess (amber) und Obsolete (rot).
+ *  Je Material gibt es entweder Excess mit Planung oder Obsolete – die Teile überschneiden sich nie. */
+function stockStackChart(id, rows, keyFn, labelFn, c, onPick) {
+  const m = new Map();
+  rows.forEach(x => {
+    const k = keyFn(x);
+    const a = m.get(k) || { name: k, total: 0, excess: 0, obsolete: 0, n: 0 };
+    a.total += x.total; a.excess += x.excess; a.obsolete += x.obsolete; a.n++;
+    m.set(k, a);
+  });
+  const top = [...m.values()].sort((a, b) => b.total - a.total).slice(0, 15);
+  hStackChart(id,
+    top.map(a => ({ label: truncate(labelFn(a.name), 28), title: labelFn(a.name) })),
+    [{ label: t('leg.stock'),    color: C.accent, data: top.map(a => Math.max(0, a.total - a.excess)) },
+     { label: t('leg.excess'),   color: C.amber,  data: top.map(a => Math.max(0, a.excess - a.obsolete)) },
+     { label: t('leg.obsolete'), color: C.red,    data: top.map(a => a.obsolete) }],
+    i => [` ${t('tip.stock', { v: fmtMoney(top[i].total) + ' ' + c })}`,
+          ` ${t('tip.excess', { v: fmtMoney(top[i].excess) + ' ' + c })} (${pct(top[i].excess, top[i].total)})`,
+          ` ${t('tip.obsolete', { v: fmtMoney(top[i].obsolete) + ' ' + c })} (${pct(top[i].obsolete, top[i].total)})`,
+          ` ${t('stock.mats', { n: fmtInt(top[i].n) })}`],
+    i => onPick(top[i].name));
+}
+
+$('stockQuick').addEventListener('click', e => {
+  const b = e.target.closest('[data-sq]');
+  if (!b) return;
+  state.stockQuick = b.dataset.sq;
+  renderStock();
+});
+$('stkOrdTile').addEventListener('click', () => {
+  state.stockQuick = state.stockQuick === 'ordered' ? 'all' : 'ordered';
+  renderStock();
+  if (state.stockQuick === 'ordered') $('stockTableCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 function renderKPIs() {
   const rows  = state.filtered;
@@ -2063,12 +2690,15 @@ function renderMeldChart() {
 }
 
 /** Klick auf Meldung: nur diese anzeigen – erneuter Klick hebt den Filter auf */
-function soloMeldung(name) {
-  const boxes = [...$('meldList').querySelectorAll('input')];
-  const idx   = state.meldungen.findIndex(m => m.name === name);
+function soloMeldung(name) { soloCheck('meldList', state.meldungen, name); }
+
+/** Nur einen Eintrag einer Checkliste aktiv lassen – erneuter Klick hebt den Filter auf */
+function soloCheck(listId, items, name) {
+  const boxes = [...$(listId).querySelectorAll('input')];
+  const idx   = items.findIndex(m => m.name === name);
   const isSolo = boxes.every((c, i) => c.checked === (i === idx));
   boxes.forEach((c, i) => c.checked = isSolo ? true : i === idx);
-  syncToggleLabel('meldList');
+  syncToggleLabel(listId);
   applyFilters();
 }
 
@@ -2207,6 +2837,7 @@ function materialRows() {
     }
     a.lieferanten.add(r.lieferant);
     a.pos.add(r.key);
+    if (!a.stk && r.stk) a.stk = r.stk;
     a.menge += r.menge;
     a.val += r.val;
     if (r.status === 'overdue') a.overdueVal += r.val;
@@ -2504,15 +3135,28 @@ const colQty = () => ({
 });
 const rowsFooter = rows => t('tbl.rowsSum', { n: fmtInt(rows.length), v: fmtMoney(sum(rows, r => r.val)) + ' ' + cur() });
 
+/* Lagerbezug (nur mit ZMMSTOCK) */
+const colCust = field => ({
+  key: 'kunde', label: () => t('col.cust'), cls: 'trunc muted', sort: r => (r[field] || '~').toLowerCase(),
+  html: r => `<span title="${escHtml(custLabel(r[field]))}">${escHtml(custLabel(r[field]))}</span>`,
+  exp: { h: () => t('col.cust'), v: r => r[field], w: 22 },
+});
+const colStockVal = (key, labelKey, get, cls) => ({
+  key, label: () => t(labelKey, { c: state.hw }), num: true, sort: r => get(r) || 0,
+  html: r => get(r) ? `<span class="${cls || ''}">${fmtMoney(get(r))}</span>` : '–',
+  exp: { h: () => t(labelKey, { c: state.hw }), v: r => get(r) || 0, t: 'n', z: '#,##0.00', w: 14 },
+});
+
 const tables = {
   ampel: DataTable({
     id: 'ampel', file: 'file.ampel', sheet: 'sheet.ampel',
     sort: { key: 'lieferdatum', dir: 1 },
     getRows: () => state.filtered.filter(r => state.ampelStatus === 'all' || r.status === state.ampelStatus),
     rowFill: r => STATUS_FILL[r.status],
-    columns: [
+    columns: () => [
       colStatus(), colLieferdatum(), colBestellung(),
       colText('lieferant', 'col.supplier', 'lieferant', 'trunc', 34),
+      ...(state.stock ? [colCust('kunde')] : []),
       colText('material', 'col.material', 'material', 'mono', 12),
       colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
       colText('einkgrp', 'col.grp', 'einkgrp', 'muted', 16),
@@ -2536,6 +3180,7 @@ const tables = {
       const cols = [
         colBestellung(),
         colText('lieferant', 'col.supplier', 'lieferant', 'trunc', 34),
+        ...(state.stock ? [colCust('kunde')] : []),
         colText('material', 'col.material', 'material', 'mono', 12),
         colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
         colText('einkgrp', 'col.grp', 'einkgrp', 'muted', 16),
@@ -2559,6 +3204,9 @@ const tables = {
         cols.push({ key: 'excess', label: () => t('col.excess', { c: state.hw }), num: true, tip: () => t('col.excessTip'),
           sort: r => r.excess, html: r => r.excess ? fmtMoney(r.excess) : '–',
           exp: { h: () => t('col.excess', { c: state.hw }), v: r => r.excess, t: 'n', z: '#,##0.00', w: 14 } });
+      }
+      if (state.stock && (a === '15' || a === '20')) {
+        cols.push({ ...colStockVal('stkExcess', 'col.stockExcess', r => r.stk && r.stk.excess, 'val-excess'), tip: () => t('col.stockExcessTip') });
       }
       cols.push(colAB(), colValue());
       return cols;
@@ -2597,9 +3245,11 @@ const tables = {
     id: 'material', file: 'file.material', sheet: 'sheet.material',
     sort: { key: 'val', dir: -1 },
     getRows: materialRows,
-    columns: [
+    columns: () => [
       colText('material', 'col.material', 'material', 'mono', 12),
       colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
+      ...(state.stock ? [{ ...colCust('kunde'), sort: r => ((r.stk && r.stk.ra) || '~').toLowerCase(),
+                            html: r => escHtml(custLabel(r.stk && r.stk.ra)), exp: { h: () => t('col.cust'), v: r => (r.stk && r.stk.ra) || '', w: 22 } }] : []),
       colText('hersteller', 'col.mfr', 'hersteller', 'trunc', 26),
       colText('mpn', 'col.mpn', 'mpn', 'trunc mono', 24),
       { key: 'lief', label: () => t('col.supplier'), cls: 'trunc', sort: r => r.lieferanten.size === 1 ? [...r.lieferanten][0].toLowerCase() : '~' + r.lieferanten.size,
@@ -2617,8 +3267,36 @@ const tables = {
         html: r => r.overdueVal ? `<span class="late">${fmtMoney(r.overdueVal)}</span>` : '–',
         exp: { h: () => t('col.overdueVal', { c: cur() }), v: r => r.overdueVal, t: 'n', z: '#,##0.00', w: 16 } },
       colValue(),
+      ...(state.stock ? [colStockVal('stkVal', 'col.stockVal', r => r.stk && r.stk.total),
+                         colStockVal('stkExcess', 'col.excessVal', r => r.stk && r.stk.excess, 'val-excess')] : []),
     ],
     footer: rows => t('mat.foot', { n: fmtInt(rows.length), v: fmtMoney(sum(rows, r => r.val)) + ' ' + cur() }),
+  }),
+
+  stock: DataTable({
+    id: 'stock', file: 'file.stock', sheet: 'sheet.stock',
+    sort: { key: 'total', dir: -1 },
+    getRows: stockTableRows,
+    rowFill: x => x.obsolete > 0 ? 'FCE4EC' : x.excess > 0 ? 'FFF3E0' : null,
+    columns: () => [
+      colText('material', 'col.material', 'material', 'mono', 12),
+      colText('text', 'col.text', 'text', 'trunc muted', 40),
+      colCust('ra'),
+      colText('einkgrp', 'col.grp', 'einkgrp', 'muted', 16),
+      colText('abc', 'col.abc', 'abc', 'muted', 6),
+      { key: 'menge', label: () => t('col.stockQty'), num: true, sort: x => x.menge,
+        html: x => `${fmtInt(x.menge)} <span class="sub-id">${escHtml(x.me)}</span>`,
+        exp: [{ h: () => t('col.stockQty'), v: x => x.menge, t: 'n', z: '#,##0', w: 12 }, { h: () => t('col.unit'), v: x => x.me, w: 6 }] },
+      colStockVal('total', 'col.stockVal', x => x.total),
+      colStockVal('excess', 'col.excessVal', x => x.excess, 'val-excess'),
+      colStockVal('obsolete', 'col.obsoleteVal', x => x.obsolete, 'val-obsolete'),
+      colStockVal('open', 'col.openOrders', x => x.open),
+      { key: 'next', label: () => t('col.next'), cls: 'mono', sort: x => x.next ? x.next.getTime() : Infinity,
+        html: x => `<span class="${x.next && x.next < state.stichtag ? 'late' : ''}">${fmtDate(x.next)}</span>`,
+        exp: { h: () => t('col.next'), v: x => x.next, t: 'd', w: 14 } },
+    ],
+    footer: rows => t('stk.foot', { n: fmtInt(rows.length), v: fmtMoney(sum(rows, x => x.total)) + ' ' + state.hw }),
+    empty: () => t('stk.empty'),
   }),
 };
 
@@ -2816,6 +3494,43 @@ function hBarChart(id, items, onClick) {
   });
 }
 
+/** Horizontaler gestapelter Balken; cats: [{label,title}], series: [{label,color,data}].
+ *  2px Lücke zwischen Segmenten, Rundung nur am Balkenende. */
+function hStackChart(id, cats, series, tipLines, onClick) {
+  const nonZero = i => series.map(s => s.data[i] > 0);
+  upsertChart(id, {
+    type: 'bar',
+    data: {
+      labels: cats.map(c => c.label),
+      datasets: series.map((s, si) => ({
+        label: s.label, data: s.data, backgroundColor: s.color, stack: 's', maxBarThickness: 20, borderSkipped: false,
+        borderRadius: ctx => si === nonZero(ctx.dataIndex).lastIndexOf(true) ? { topRight: 4, bottomRight: 4, topLeft: 0, bottomLeft: 0 } : 0,
+        borderColor: C.gap,
+        borderWidth: ctx => si > nonZero(ctx.dataIndex).indexOf(true) && s.data[ctx.dataIndex] > 0 ? { left: 2, right: 0, top: 0, bottom: 0 } : 0,
+      })),
+    },
+    options: baseOptions({
+      indexAxis: 'y',
+      onClick: onClick ? (evt, els) => { if (els.length) onClick(els[0].index); } : undefined,
+      onHover: onClick ? (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; } : undefined,
+      scales: {
+        x: { stacked: true, grid: { color: C.grid }, border: { display: false }, ticks: { color: C.text2, callback: v => fmtCompact(v) } },
+        y: { stacked: true, grid: { display: false }, ticks: { color: C.text2 } },
+      },
+      plugins: {
+        tooltip: {
+          mode: 'index', intersect: true,
+          filter: item => item.datasetIndex === 0,
+          callbacks: {
+            title: ctx => cats[ctx[0].dataIndex].title,
+            label: ctx => tipLines(ctx.dataIndex),
+          },
+        },
+      },
+    }),
+  });
+}
+
 /** Top-N Gruppen nach Wert: [{name, val, pos}] */
 function topBy(rows, keyFn, n) {
   const m = new Map();
@@ -2924,14 +3639,6 @@ function showError(titleKey, htmlFn) {
   box.hidden = false;
 }
 function hideError() { $('errorBox').hidden = true; lastError = null; }
-
-function showWarning(featMissing) {
-  const items = [...featMissing].map(([feat, names]) =>
-    `<li>${t('warn.feature', { cols: names.map(n => `<code>${escHtml(n[lang === 'de' ? 0 : 1] || n[0])}</code>`).join(', '), feat: escHtml(t(feat)) })}</li>`);
-  $('warnBox').innerHTML = `<strong>${escHtml(t('warn.optional'))}</strong><ul>${items.join('')}</ul>`;
-  $('warnBox').hidden = false;
-}
-function hideWarning() { $('warnBox').hidden = true; lastWarning = null; }
 
 /* ═══════════════════════════════════════════════════
    INIT
