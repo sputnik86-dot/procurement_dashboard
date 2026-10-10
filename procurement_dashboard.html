@@ -305,6 +305,7 @@
     /* ── KPI tiles ── */
     .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
     .kpi-grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .kpi-grid.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 
     .kpi {
       background: var(--card);
@@ -344,6 +345,11 @@
 
     .legend { display: flex; gap: 14px; font-size: 0.75rem; color: var(--text-2); flex-wrap: wrap; }
     .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend[data-chart] > span { cursor: pointer; user-select: none; border-radius: 4px; transition: opacity 0.15s; }
+    .legend[data-chart] > span:hover { color: var(--text); }
+    .legend[data-chart] > span:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+    .legend[data-chart] > span.off { opacity: 0.4; }
+    .legend[data-chart] > span.off > span { text-decoration: line-through; }
     .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
 
     .chart-box { position: relative; width: 100%; }
@@ -492,7 +498,7 @@
 
     /* ── Responsive ── */
     @media (max-width: 1350px) {
-      .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .kpi-grid, .kpi-grid.six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .kpi-grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 1150px) {
@@ -512,7 +518,7 @@
     @media (max-width: 600px) {
       header { gap: 10px; padding: 0 12px; }
       .logo-mark, #stichtagPill { display: none; }
-      .kpi-grid, .kpi-grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpi-grid, .kpi-grid.four, .kpi-grid.six { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -661,12 +667,13 @@
 
       <!-- ════════════ ÜBERSICHT ════════════ -->
       <section class="view" id="view-overview">
-        <div class="kpi-grid">
+        <div class="kpi-grid" id="ovKpis">
           <div class="kpi"><div class="kpi-label" data-i18n="kpi.total">Offener Bestellwert</div><div class="kpi-value" id="kpiTotal">—</div><div class="kpi-sub" id="kpiTotalSub">—</div></div>
           <div class="kpi"><div class="kpi-label" data-i18n="kpi.pos">Bestellpositionen</div><div class="kpi-value" id="kpiPos">—</div><div class="kpi-sub" id="kpiPosSub">—</div></div>
           <div class="kpi red"><div class="kpi-label" data-i18n="kpi.overdue">Überfällig</div><div class="kpi-value" id="kpiOverdue">—</div><div class="kpi-sub" id="kpiOverdueSub">—</div></div>
           <div class="kpi amber"><div class="kpi-label" data-i18n="kpi.noab">Ohne Auftragsbestätigung</div><div class="kpi-value" id="kpiNoAB">—</div><div class="kpi-sub" id="kpiNoABSub">—</div></div>
           <div class="kpi green"><div class="kpi-label" data-i18n="kpi.sup">Lieferanten</div><div class="kpi-value" id="kpiSup">—</div><div class="kpi-sub" data-i18n="kpi.supSub">Kreditoren mit offenen Positionen</div></div>
+          <div class="kpi green" id="banfKpi" hidden><div class="kpi-label" data-i18n="kpi.banf">Offene Banfen</div><div class="kpi-value" id="kpiBanf">—</div><div class="kpi-sub" id="kpiBanfSub">—</div></div>
         </div>
 
         <div class="kpi-grid four" id="stockKpis" hidden>
@@ -679,9 +686,10 @@
         <div class="card">
           <div class="card-header">
             <div><div class="card-title" data-i18n="month.title">Offener Bestellwert nach Liefermonat</div><div class="card-sub" id="monthSub">—</div></div>
-            <div class="legend">
-              <span><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.overdue">Überfällig</span></span>
-              <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.open">Termin offen</span></span>
+            <div class="legend" data-chart="monthChart" data-i18n-title="leg.toggle">
+              <span data-ds="a" role="button" tabindex="0"><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.overdue">Überfällig</span></span>
+              <span data-ds="b" role="button" tabindex="0"><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.open">Termin offen</span></span>
+              <span data-ds="c" role="button" tabindex="0" id="legBanf" hidden><i class="swatch" style="background:var(--green)"></i><span data-i18n="leg.banf">Banfen</span></span>
             </div>
           </div>
           <div class="chart-box" style="height:260px"><canvas id="monthChart" role="img" data-i18n-aria="month.title"></canvas></div>
@@ -707,9 +715,9 @@
         <div class="card" id="capCard" hidden>
           <div class="card-header">
             <div><div class="card-title" data-i18n="cap.title">Gebundenes Kapital je Kunde</div><div class="card-sub" id="capSub">—</div></div>
-            <div class="legend">
-              <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.capStock">Lagerwert</span></span>
-              <span><i class="swatch" style="background:#0d9488"></i><span data-i18n="leg.capOrders">Offene Bestellungen</span></span>
+            <div class="legend" data-chart="capChart" data-i18n-title="leg.toggle">
+              <span data-ds="0" role="button" tabindex="0"><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.capStock">Lagerwert</span></span>
+              <span data-ds="1" role="button" tabindex="0"><i class="swatch" style="background:#0d9488"></i><span data-i18n="leg.capOrders">Offene Bestellungen</span></span>
             </div>
           </div>
           <div class="chart-box" style="height:320px"><canvas id="capChart" role="img" data-i18n-aria="cap.title"></canvas></div>
@@ -735,6 +743,15 @@
           </div>
           <div class="table-scroll"><table><thead><tr id="ampelHead"></tr></thead><tbody id="ampelBody"></tbody></table></div>
           <div class="table-foot" id="ampelFoot"></div>
+        </div>
+
+        <div class="card" id="banfCard" hidden>
+          <div class="card-header">
+            <div><div class="card-title" data-i18n="banf.title">Offene Bestellanforderungen</div><div class="card-sub" data-i18n="banf.sub">Eine Zeile je Banf-Position</div></div>
+            <div class="table-tools"><button class="btn-download" data-export="banf" data-i18n="btn.export">⬇ Excel-Export</button></div>
+          </div>
+          <div class="table-scroll"><table><thead><tr id="banfHead"></tr></thead><tbody id="banfBody"></tbody></table></div>
+          <div class="table-foot" id="banfFoot"></div>
         </div>
       </section>
 
@@ -781,9 +798,9 @@
             </div>
             <div class="table-tools">
               <label class="switch" data-i18n-title="pay.skontoTip"><input type="checkbox" id="skontoToggle" /> <span data-i18n="pay.skonto">Skonto ziehen</span></label>
-              <div class="legend">
-                <span><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.payLate">aus überfälligen Lieferungen</span></span>
-                <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.payOn">aus termingerechten Lieferungen</span></span>
+              <div class="legend" data-chart="payChart" data-i18n-title="leg.toggle">
+                <span data-ds="a" role="button" tabindex="0"><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.payLate">aus überfälligen Lieferungen</span></span>
+                <span data-ds="b" role="button" tabindex="0"><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.payOn">aus termingerechten Lieferungen</span></span>
               </div>
             </div>
           </div>
@@ -844,10 +861,10 @@
           <div class="card">
             <div class="card-header">
               <div><div class="card-title" data-i18n="stk.custTitle">Lagerwert je Kunde</div><div class="card-sub" data-i18n="stk.chartSub">—</div></div>
-              <div class="legend">
-                <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.stock">Lagerwert</span></span>
-                <span><i class="swatch" style="background:var(--amber)"></i><span data-i18n="leg.excess">Excess</span></span>
-                <span><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.obsolete">Obsolete</span></span>
+              <div class="legend" data-chart="stkCustChart" data-i18n-title="leg.toggle">
+                <span data-ds="0" role="button" tabindex="0"><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.stock">Lagerwert</span></span>
+                <span data-ds="1" role="button" tabindex="0"><i class="swatch" style="background:var(--amber)"></i><span data-i18n="leg.excess">Excess</span></span>
+                <span data-ds="2" role="button" tabindex="0"><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.obsolete">Obsolete</span></span>
               </div>
             </div>
             <div class="chart-box" style="height:420px"><canvas id="stkCustChart" role="img" data-i18n-aria="stk.custTitle"></canvas></div>
@@ -855,10 +872,10 @@
           <div class="card">
             <div class="card-header">
               <div><div class="card-title" data-i18n="stk.grpTitle">Lagerwert je Einkäufergruppe</div><div class="card-sub" data-i18n="stk.chartSub">—</div></div>
-              <div class="legend">
-                <span><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.stock">Lagerwert</span></span>
-                <span><i class="swatch" style="background:var(--amber)"></i><span data-i18n="leg.excess">Excess</span></span>
-                <span><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.obsolete">Obsolete</span></span>
+              <div class="legend" data-chart="stkGrpChart" data-i18n-title="leg.toggle">
+                <span data-ds="0" role="button" tabindex="0"><i class="swatch" style="background:var(--accent)"></i><span data-i18n="leg.stock">Lagerwert</span></span>
+                <span data-ds="1" role="button" tabindex="0"><i class="swatch" style="background:var(--amber)"></i><span data-i18n="leg.excess">Excess</span></span>
+                <span data-ds="2" role="button" tabindex="0"><i class="swatch" style="background:var(--red-mark)"></i><span data-i18n="leg.obsolete">Obsolete</span></span>
               </div>
             </div>
             <div class="chart-box" style="height:420px"><canvas id="stkGrpChart" role="img" data-i18n-aria="stk.grpTitle"></canvas></div>
@@ -1044,6 +1061,11 @@ const I18N = {
     'feat.stockExcess': 'Excess / Obsolete im Lager', 'feat.cust': 'Kundenzuordnung (Reporting Account)',
     'side.cust': 'Kunde', 'ph.cust': 'Kunde suchen…', 'cust.none': '(ohne Kunde)',
     'sum.cust': '{a}/{b} Kunden', 'sum.stock': '{a} von {b} Lagermaterialien',
+    'leg.toggle': 'Klick auf einen Eintrag blendet ihn ein oder aus', 'sum.banf': '{a} von {b} Banfen', 'kpi.banf': 'Offene Banfen', 'kpi.banfSub': '{n} Banf-Positionen', 'leg.banf': 'Banfen',
+    'month.subBanf': ' · Banfen {v} (Umterminierungsdatum, sonst Lieferdatum)',
+    'banf.title': 'Offene Bestellanforderungen', 'banf.sub': 'Eine Zeile je Banf-Position · Termin = Umterminierungsdatum, sonst Lieferdatum',
+    'col.banf': 'Banf', 'col.banfDate': 'Termin', 'col.banfDateTip': 'Umterminierungsdatum, sonst Lieferdatum', 'col.resched': 'Umterminierung',
+    'file.banf': 'Procurement_Banfen', 'sheet.banf': 'Banfen', 'tbl.emptyBanf': 'Keine Banfen für diese Auswahl.',
     'tab.stock': 'Lager',
     'stk.k1': 'Lagerwert', 'stk.k1sub': '{n} Materialien', 'stk.k2': 'davon Excess', 'stk.k3': 'davon Obsolete',
     'stk.kShare': '{p} des Lagerwerts · {n} Materialien',
@@ -1222,6 +1244,11 @@ const I18N = {
     'feat.stockExcess': 'Excess / obsolete stock', 'feat.cust': 'Customer assignment (reporting account)',
     'side.cust': 'Customer', 'ph.cust': 'Search customer…', 'cust.none': '(no customer)',
     'sum.cust': '{a}/{b} customers', 'sum.stock': '{a} of {b} stock materials',
+    'leg.toggle': 'Click an entry to show or hide it', 'sum.banf': '{a} of {b} requisitions', 'kpi.banf': 'Open requisitions', 'kpi.banfSub': '{n} requisition items', 'leg.banf': 'Requisitions',
+    'month.subBanf': ' · requisitions {v} (rescheduling date, else delivery date)',
+    'banf.title': 'Open purchase requisitions', 'banf.sub': 'One row per requisition item · due date = rescheduling date, else delivery date',
+    'col.banf': 'Requisition', 'col.banfDate': 'Due date', 'col.banfDateTip': 'Rescheduling date, else delivery date', 'col.resched': 'Rescheduling',
+    'file.banf': 'Procurement_Requisitions', 'sheet.banf': 'Requisitions', 'tbl.emptyBanf': 'No requisitions for this selection.',
     'tab.stock': 'Stock',
     'stk.k1': 'Stock value', 'stk.k1sub': '{n} materials', 'stk.k2': 'thereof excess', 'stk.k3': 'thereof obsolete',
     'stk.kShare': '{p} of stock value · {n} materials',
@@ -1289,7 +1316,7 @@ function setLanguage(l) {
   refreshWarnings();
   updateStockUI();
   updateT024UI();
-  if (!state.rows.length) return;
+  if (!hasData()) return;
   // geladene Daten in der neuen Sprache neu darstellen
   updateReportUI();
   relabelList('meldList', state.meldungen, meldLabel);
@@ -1302,7 +1329,7 @@ function setLanguage(l) {
 /* ═══════════════════════════════════════════════════
    KONSTANTEN
 ═══════════════════════════════════════════════════ */
-const C = { accent: '#6366f1', red: '#ef4444', amber: '#f59e0b', teal: '#0d9488', gap: '#1b2537', text2: '#94a3b8', grid: 'rgba(148,163,184,0.12)' };
+const C = { accent: '#6366f1', red: '#ef4444', amber: '#f59e0b', teal: '#0d9488', green: '#10b981', gap: '#1b2537', text2: '#94a3b8', grid: 'rgba(148,163,184,0.12)' };
 const TABLE_LIMIT = 300;
 
 /* SAP-Ausnahmemeldungen: der Code ist sprachunabhängig (07/10/15/20) */
@@ -1311,9 +1338,15 @@ const MELD = {
   '10': { de: 'Vorgang vorziehen',          en: 'Reschedule in',           shortDe: 'Vorziehen',   shortEn: 'Reschedule in' },
   '15': { de: 'Vorgang verschieben',        en: 'Reschedule out',          shortDe: 'Verschieben', shortEn: 'Reschedule out' },
   '20': { de: 'Vorgang stornieren',         en: 'Cancel process',          shortDe: 'Stornieren',  shortEn: 'Cancel' },
+  /* bei Banfen */
+  '06': { de: 'Starttermin in Vergangenheit',      en: 'Start date in the past',             shortDe: 'Starttermin i. d. Vergangenheit', shortEn: 'Start date in past' },
+  '03': { de: 'NEU/Starttermin in Vergangenheit',  en: 'New, and start date in the past',    shortDe: 'Neu, Starttermin vorbei',  shortEn: 'New, start date in past' },
+  '04': { de: 'NEU/Endtermin in Vergangenheit',    en: 'New, and finish date in the past',   shortDe: 'Neu, Endtermin vorbei',    shortEn: 'New, finish date in past' },
+  '42': { de: 'Bestellvorschlag geändert',         en: 'Order proposal has been changed',    shortDe: 'Vorschlag geändert',       shortEn: 'Proposal changed' },
+  '30': { de: 'Vorgang termingerecht einplanen',   en: 'Plan process according to schedule', shortDe: 'Termingerecht einplanen',  shortEn: 'Plan per schedule' },
 };
 const MELD_TEXT_TO_CODE = Object.fromEntries(Object.entries(MELD).flatMap(([code, m]) => [[m.de.toLowerCase(), code], [m.en.toLowerCase(), code]]));
-const MELD_ORDER = ['10', '15', '20', '07'];
+const MELD_ORDER = ['10', '15', '20', '07', '06', '03', '04', '42', '30'];
 const NO_MELDUNG = '';
 
 const ACTIONS = [
@@ -1464,6 +1497,8 @@ const STOCK_FIELDS = {
 ═══════════════════════════════════════════════════ */
 const state = {
   rows: [], filtered: [],
+  banfen: [], banfFiltered: [],
+  chartHidden: {},   // je Diagramm per Legende ausgeblendete Serien (Set der data-ds-Schlüssel)   // Bestellanforderungen (Einkaufsbeleg beginnt mit 3)
   hw: 'CHF',
   curMode: 'HW',          // 'HW' oder Bestellwährung (z. B. 'EUR')
   hasOrigValues: false,
@@ -1518,7 +1553,7 @@ const t024Input  = $('t024Input');
 $('stockRemove').addEventListener('click', e => {
   e.stopPropagation();
   state.stock = null;
-  if (state.rows.length) { linkStock(); buildFilterLists(); applyFilters(); }
+  if (hasData()) { linkStock(); buildFilterLists(); applyFilters(); }
   updateStockUI();
   refreshWarnings();
 });
@@ -1526,7 +1561,7 @@ $('stockRemove').addEventListener('click', e => {
 $('t024Remove').addEventListener('click', e => {
   e.stopPropagation();
   state.t024 = null;
-  if (state.rows.length) { linkStock(); buildFilterLists(); applyFilters(); }
+  if (hasData()) { linkStock(); buildFilterLists(); applyFilters(); }
   updateT024UI();
 });
 
@@ -1658,7 +1693,7 @@ function loadStock(aoa, fileName) {
   const curRow = H.waehrung !== null && data.find(r => str(r[H.waehrung]));
   state.stock = { rows: [...byMat.values()], byMat, fileName, stamp: parseFileStamp(fileName), featMissing,
                   cur: curRow ? str(curRow[H.waehrung]) : null };
-  if (state.rows.length) { linkStock(); buildFilterLists(); applyFilters(); }
+  if (hasData()) { linkStock(); buildFilterLists(); applyFilters(); }
   updateStockUI();
   refreshWarnings();
 }
@@ -1693,7 +1728,7 @@ function loadT024(aoa, fileName) {
   }
   if (!map.size) throw i18nError('err.t024NoRows');
   state.t024 = { map, fileName };
-  if (state.rows.length) { linkStock(); buildFilterLists(); applyFilters(); }
+  if (hasData()) { linkStock(); buildFilterLists(); applyFilters(); }
   updateT024UI();
 }
 
@@ -1702,7 +1737,8 @@ function loadT024(aoa, fileName) {
 function resolveGroups() {
   const t024 = state.t024 ? state.t024.map : null;
   const zbk = new Map();
-  state.rows.forEach(r => {
+  const all = state.rows.concat(state.banfen);
+  all.forEach(r => {
     if (!r.einkgrpNr || !r.einkgrpZbk) return;
     const m = zbk.get(r.einkgrpNr) || new Map();
     m.set(r.einkgrpZbk, (m.get(r.einkgrpZbk) || 0) + 1);
@@ -1714,7 +1750,7 @@ function resolveGroups() {
     if (e && e.name && !NOT_IN_USE.test(e.name)) return e.name;
     return own || zbkName(code) || code || '—';
   };
-  state.rows.forEach(r => r.einkgrp = nameOf(r.einkgrpNr, r.einkgrpZbk));
+  all.forEach(r => r.einkgrp = nameOf(r.einkgrpNr, r.einkgrpZbk));
   if (state.stock) state.stock.rows.forEach(x => x.einkgrp = nameOf(x.grpNr, ''));
 }
 
@@ -1732,8 +1768,9 @@ function updateT024UI() {
 function linkStock() {
   resolveGroups();
   const st = state.stock;
-  if (!st) { state.rows.forEach(r => { r.kunde = ''; r.stk = null; }); return; }
-  state.rows.forEach(r => { const s = st.byMat.get(r.material); r.stk = s || null; r.kunde = s ? s.ra : ''; });
+  const all = state.rows.concat(state.banfen);
+  if (!st) { all.forEach(r => { r.kunde = ''; r.stk = null; }); return; }
+  all.forEach(r => { const s = st.byMat.get(r.material); r.stk = s || null; r.kunde = s ? s.ra : ''; });
 }
 
 function updateStockUI() {
@@ -1742,7 +1779,7 @@ function updateStockUI() {
   $('stockIcon').textContent = st && !state.isReport ? '✓' : '📦';
   $('stockHint').innerHTML = st
     ? `<span class="drop-file" title="${escHtml(st.fileName)}">${escHtml(st.fileName)}</span>` +
-      escHtml(t('stock.mats', { n: fmtInt(st.rows.length) }) + (state.rows.length ? '' : ' · ' + t('stock.waiting')))
+      escHtml(t('stock.mats', { n: fmtInt(st.rows.length) }) + (hasData() ? '' : ' · ' + t('stock.waiting')))
     : escHtml(t('drop.hint'));
   $('stockRemove').hidden = !st || !!state.isReport;
   $('stockTab').hidden = !st;
@@ -1755,11 +1792,11 @@ function refreshWarnings() {
   const items = [];
   const add = fm => fm && fm.forEach((names, feat) => items.push(
     `<li>${t('warn.feature', { cols: names.map(n => `<code>${escHtml(n[lang === 'de' ? 0 : 1] || n[0])}</code>`).join(', '), feat: escHtml(t(feat)) })}</li>`));
-  if (state.rows.length) add(state.featMissing);
+  if (hasData()) add(state.featMissing);
   if (state.stock) add(state.stock.featMissing);
   const notes = [];
   const sd = state.stock && state.stock.stamp.d;
-  if (sd && state.rows.length && state.stichtagTs && Math.abs(daysBetween(sd, state.stichtagAuto)) > 3) {
+  if (sd && hasData() && state.stichtagTs && Math.abs(daysBetween(sd, state.stichtagAuto)) > 3) {
     notes.push(`<li>${escHtml(t('warn.stockDate', { a: fmtDate(sd), b: fmtDate(state.stichtagAuto) }))}</li>`);
   }
   if (!items.length && !notes.length) { $('warnBox').hidden = true; return; }
@@ -1870,7 +1907,7 @@ function loadRows(aoa, fileName) {
   const num = c => r => c !== null && c !== undefined ? toNumber(r[c]) : 0;
   const termCache = new Map();
 
-  state.rows = data
+  const all = data
     .filter(r => str(r[H.beleg]) !== '')
     .map(r => {
       const beleg = str(r[H.beleg]);
@@ -1919,7 +1956,8 @@ function loadRows(aoa, fileName) {
       };
     });
 
-  if (!state.rows.length) throw i18nError('err.noRows');
+  if (!all.length) throw i18nError('err.noRows');
+  splitBanfen(all);
 
   const hwRow = H.hw !== null && data.find(r => str(r[H.hw]));
   state.hw = hwRow ? str(hwRow[H.hw]) : 'CHF';
@@ -1930,12 +1968,24 @@ function loadRows(aoa, fileName) {
   activateData(fileName);
 }
 
+/** Bestellungen (45…, 43…, 47… usw.) und Banfen (3…) trennen.
+ *  Bei Banfen gilt das Umterminierungsdatum, sonst das Lieferdatum. */
+const isBanf = beleg => beleg.startsWith('3');
+function splitBanfen(all) {
+  state.rows = all.filter(r => !isBanf(r.beleg));
+  state.banfen = all.filter(r => isBanf(r.beleg));
+  state.banfen.forEach(r => r.termin = r.umterm || r.lieferdatum);
+}
+const hasData = () => state.rows.length > 0 || state.banfen.length > 0;
+
 /** Geladene Zeilen (aus Excel oder eingebettetem Report) in die Oberfläche übernehmen */
 function activateData(fileName) {
   state.curMode = 'HW';
   clearTableFilters();
+  Object.values(state.chartHidden).forEach(h => h.clear());
+  document.querySelectorAll('.legend[data-chart] > span').forEach(el => el.classList.remove('off'));
 
-  const times = state.rows.filter(r => r.lieferdatum).map(r => r.lieferdatum.getTime());
+  const times = [...state.rows.map(r => r.lieferdatum), ...state.banfen.map(r => r.termin)].filter(Boolean).map(d => d.getTime());
   state.dateMin = times.length ? new Date(times.reduce((a, b) => Math.min(a, b))) : null;
   state.dateMax = times.length ? new Date(times.reduce((a, b) => Math.max(a, b))) : null;
 
@@ -1986,7 +2036,7 @@ const fromLocalStamp = s => {
 
 function serializeData() {
   const terms = [], termIdx = new Map();
-  const rows = state.rows.map(r => ROW_FIELDS.map(f => {
+  const rows = state.rows.concat(state.banfen).map(r => ROW_FIELDS.map(f => {
     const v = r[f];
     if (f === 'term') {
       if (!termIdx.has(v)) { termIdx.set(v, terms.length); terms.push(v); }
@@ -2024,7 +2074,7 @@ function serializeData() {
 
 function loadEmbedded(p) {
   const idx = Object.fromEntries(p.fields.map((f, i) => [f, i]));
-  state.rows = p.rows.map(a => {
+  splitBanfen(p.rows.map(a => {
     const r = {};
     for (const f of ROW_FIELDS) {
       const v = idx[f] !== undefined ? a[idx[f]] : null;
@@ -2038,7 +2088,7 @@ function loadEmbedded(p) {
     if (!r.einkgrpZbk && r.einkgrp !== '—') r.einkgrpZbk = r.einkgrp;                            // Reports vor T024
     r.key = r.beleg + '-' + r.pos;
     return r;
-  });
+  }));
   state.hw = p.hw;
   state.hasOrigValues = p.hasOrigValues;
   state.featMissing = new Map(p.featMissing || []);
@@ -2081,7 +2131,7 @@ function loadEmbedded(p) {
 }
 
 function updateReportUI() {
-  if (!state.rows.length) return;
+  if (!hasData()) return;
   const rep = state.report;
   $('reportPill').hidden = !rep;
   if (rep) {
@@ -2089,14 +2139,14 @@ function updateReportUI() {
     $('reportPill').title = t('report.pillTip', { f: rep.fileName });
   }
   $('dropHint').innerHTML = `<span class="drop-file" title="${escHtml(state.fileName)}">${escHtml(state.fileName)}</span>` +
-    escHtml(rep ? t('report.dropHint', { n: fmtInt(state.rows.length), d: fmtDateTime(rep.created) }) : t('drop.rows', { n: fmtInt(state.rows.length) }));
+    escHtml(rep ? t('report.dropHint', { n: fmtInt(state.rows.length + state.banfen.length), d: fmtDateTime(rep.created) }) : t('drop.rows', { n: fmtInt(state.rows.length + state.banfen.length) }));
   if (state.isReport) $('fileLabel').textContent = t('report.side');
 }
 
 $('saveReportBtn').addEventListener('click', saveReport);
 
 async function saveReport() {
-  if (!state.rows.length) return;
+  if (!hasData()) return;
   showLoading(true);
   try {
     let html = PRISTINE_HTML;
@@ -2194,7 +2244,7 @@ function updateStichtagUI() {
 
 $('stichtagInput').addEventListener('change', e => {
   const d = fromInputDate(e.target.value);
-  if (!d || !state.rows.length) return;
+  if (!d || !hasData()) return;
   state.stichtag = d;
   state.stichtagManual = true;
   updateStichtagUI();
@@ -2266,7 +2316,8 @@ function paymentOf(r, skonto) {
 function buildFilterLists() {
   const st = state.stock;
   const grp = new Map();
-  state.rows.forEach(r => grp.set(r.einkgrp, (grp.get(r.einkgrp) || 0) + 1));
+  const all = state.rows.concat(state.banfen);
+  all.forEach(r => grp.set(r.einkgrp, (grp.get(r.einkgrp) || 0) + 1));
   if (st) st.rows.forEach(x => { if (!grp.has(x.einkgrp)) grp.set(x.einkgrp, 0); });   // Gruppen nur im Lager
   state.grps = [...grp].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
@@ -2274,11 +2325,11 @@ function buildFilterLists() {
   if (st) {
     const k = new Map();
     st.rows.forEach(x => k.set(x.ra, (k.get(x.ra) || 0) + 1));     // Anzahl Lagermaterialien je Kunde
-    state.rows.forEach(r => { if (!k.has(r.kunde)) k.set(r.kunde, 0); });
+    all.forEach(r => { if (!k.has(r.kunde)) k.set(r.kunde, 0); });
     state.kunden = [...k].map(([name, count]) => ({ name, count }))
       .sort((a, b) => (a.name === '') - (b.name === '') || a.name.localeCompare(b.name, 'de'));
   }
-  state.meldungen = countBy(state.rows, r => r.meldung).sort((a, b) => meldRank(a.name) - meldRank(b.name) || a.name.localeCompare(b.name, 'de'));
+  state.meldungen = countBy(all, r => r.meldung).sort((a, b) => meldRank(a.name) - meldRank(b.name) || a.name.localeCompare(b.name, 'de'));
 
   buildCheckList('grpList', state.grps, x => x);
   buildCheckList('custList', state.kunden, custLabel);
@@ -2350,7 +2401,7 @@ $('dateTo').addEventListener('change',   () => { markPreset(null); applyFilters(
 
 $('datePresets').addEventListener('click', e => {
   const btn = e.target.closest('[data-preset]');
-  if (!btn || !state.rows.length) return;
+  if (!btn || !hasData()) return;
   const p = btn.dataset.preset;
   const ref = state.stichtag;
   if (p === 'all')          setDateRange(state.dateMin, state.dateMax);
@@ -2384,14 +2435,14 @@ function buildCurrencyChips() {
 
 function markCurrency() {
   $('currencyChips').querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.cur === state.curMode));
-  $('currencyHint').textContent = !state.rows.length ? '' : state.curMode === 'HW'
+  $('currencyHint').textContent = !hasData() ? '' : state.curMode === 'HW'
     ? t('cur.hwHint', { c: state.hw })
     : t('cur.origHint', { c: state.curMode });
 }
 
 $('currencyChips').addEventListener('click', e => {
   const btn = e.target.closest('[data-cur]');
-  if (!btn || !state.rows.length) return;
+  if (!btn || !hasData()) return;
   state.curMode = btn.dataset.cur;
   markCurrency();
   clearTableFilters();
@@ -2399,7 +2450,7 @@ $('currencyChips').addEventListener('click', e => {
 });
 
 $('resetBtn').addEventListener('click', () => {
-  if (!state.rows.length) return;
+  if (!hasData()) return;
   CHECK_LISTS.forEach(id => {
     $(id).querySelectorAll('.check-item').forEach(el => el.classList.remove('hidden'));
     $(id).querySelectorAll('input').forEach(c => c.checked = true);
@@ -2419,7 +2470,7 @@ $('resetBtn').addEventListener('click', () => {
    FILTERN
 ═══════════════════════════════════════════════════ */
 function applyFilters() {
-  if (!state.rows.length) return;
+  if (!hasData()) return;
   const grps   = selectedNames('grpList', state.grps);
   const custs  = state.stock ? selectedNames('custList', state.kunden) : null;
   const melds  = selectedNames('meldList', state.meldungen);
@@ -2430,26 +2481,29 @@ function applyFilters() {
   const ref    = state.stichtag;
   const in7    = addDays(ref, 7);
 
-  state.filtered = state.rows.filter(r => {
+  const keep = (r, d) => {
     if (!hw && r.waehrung !== state.curMode) return false;
     if (!grps.has(r.einkgrp)) return false;
     if (custs && !custs.has(r.kunde)) return false;
     if (!melds.has(r.meldung)) return false;
-    if (r.lieferdatum) {
-      if (from && r.lieferdatum < from) return false;
-      if (to   && r.lieferdatum > to)   return false;
+    if (d) {
+      if (from && d < from) return false;
+      if (to   && d > to)   return false;
     }
     if (q) {
       const hay = (r.lieferant + ' ' + r.kreditor + ' ' + r.material + ' ' + r.kurztext + ' ' + r.beleg + ' ' + r.ab + ' ' + r.hersteller + ' ' + r.mpn + ' ' + (r.kunde || '')).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
-  });
+  };
+  state.filtered = state.rows.filter(r => keep(r, r.lieferdatum));
+  state.banfFiltered = state.banfen.filter(r => keep(r, r.termin));
 
   state.filtered.forEach(r => {
     r.val = hw ? r.betragHW : r.betragOrig;
     r.status = !r.lieferdatum ? 'ok' : r.lieferdatum < ref ? 'overdue' : r.lieferdatum <= in7 ? 'soon' : 'ok';
   });
+  state.banfFiltered.forEach(r => r.val = hw ? r.betragHW : r.betragOrig);
 
   // Lager: Einkäufergruppe, Kunde und Suche gelten auch hier; offene Bestellungen je Material aus der gefilterten ZBK
   if (state.stock) {
@@ -2476,6 +2530,7 @@ function renderSummary(grps, melds, q, custs) {
   if (grps.size < state.grps.length)       parts.push(t('sum.grp', { a: grps.size, b: state.grps.length }));
   if (melds.size < state.meldungen.length) parts.push(t('sum.meld', { a: melds.size, b: state.meldungen.length }));
   if (custs && custs.size < state.kunden.length) parts.push(t('sum.cust', { a: custs.size, b: state.kunden.length }));
+  if (state.banfen.length) parts.push(t('sum.banf', { a: fmtInt(state.banfFiltered.length), b: fmtInt(state.banfen.length) }));
   if (state.stock) parts.push(t('sum.stock', { a: fmtInt(state.stockFiltered.length), b: fmtInt(state.stock.rows.length) }));
   if (q) parts.push(escHtml(t('sum.search', { q })));
   $('filterSummary').innerHTML = parts.join(' · ');
@@ -2494,7 +2549,7 @@ $('viewTabs').addEventListener('click', e => {
 });
 
 function render() {
-  if (!state.rows.length) return;
+  if (!hasData()) return;
   if (state.view === 'overview')      renderOverview();
   else if (state.view === 'actions')  renderActions();
   else if (state.view === 'payments') renderPayments();
@@ -2513,6 +2568,8 @@ function renderOverview() {
   renderSupplierChart();
   renderStockOverview();
   tables.ampel.render();
+  $('banfCard').hidden = !state.banfen.length;
+  if (state.banfen.length) tables.banf.render();
 }
 
 /* Übersicht: Lager-Kacheln + Gebundenes Kapital je Kunde (nur mit ZMMSTOCK, Hauswährung) */
@@ -2637,6 +2694,15 @@ function renderKPIs() {
   setKpi('kpiNoAB', fmtInt(noABKeys.size));
   $('kpiNoABSub').textContent = t('kpi.noabSub', { p: pct(noABKeys.size, keys.size) });
   setKpi('kpiSup', fmtInt(suppliers.size));
+
+  const banf = state.banfen.length > 0;
+  $('banfKpi').hidden = !banf;
+  $('ovKpis').classList.toggle('six', banf);
+  if (banf) {
+    const bVal = sum(state.banfFiltered, r => r.val);
+    setKpi('kpiBanf', fmtCompact(bVal), cur(), fmtMoney(bVal) + ' ' + cur());
+    $('kpiBanfSub').textContent = t('kpi.banfSub', { n: fmtInt(new Set(state.banfFiltered.map(r => r.key)).size) });
+  }
 }
 
 function setKpi(id, value, unit, title) {
@@ -2674,17 +2740,22 @@ function renderAB() {
 }
 
 function renderMonthChart() {
-  const s = monthSeries(state.filtered, r => r.lieferdatum, r => r.status === 'overdue', r => r.val);
+  const banf = state.banfen.length > 0;
+  const s = monthSeries(state.filtered, r => r.lieferdatum, r => r.status === 'overdue', r => r.val,
+    banf ? { items: state.banfFiltered, dateFn: r => r.termin, valFn: r => r.val } : null);
+  $('legBanf').hidden = !banf;
   $('monthSub').textContent = s.labels.length
-    ? t('month.sub', { v: fmtMoney(s.total) + ' ' + cur(), later: s.laterNote })
+    ? t('month.sub', { v: fmtMoney(s.total) + ' ' + cur(), later: s.laterNote }) +
+      (banf ? t('month.subBanf', { v: fmtMoney(s.totalC) + ' ' + cur() }) : '')
     : t('noData');
-  stackedMonthChart('monthChart', s, t('leg.overdue'), t('leg.open'));
+  stackedMonthChart('monthChart', s, t('leg.overdue'), t('leg.open'), banf ? t('leg.banf') : null);
 }
 
 function renderMeldChart() {
+  const po = new Set(state.rows.map(r => r.meldung));          // nur Meldungen, die bei Bestellungen vorkommen
   const agg = new Map(state.meldungen.map(m => [m.name, { val: 0, n: 0 }]));
   state.filtered.forEach(r => { const a = agg.get(r.meldung); a.val += r.val; a.n++; });
-  const items = state.meldungen.map(m => ({ name: m.name, ...agg.get(m.name) }));
+  const items = state.meldungen.filter(m => po.has(m.name)).map(m => ({ name: m.name, ...agg.get(m.name) }));
   hBarChart('meldChart', items.map(i => ({ label: meldShort(i.name), title: meldLabel(i.name), val: i.val, extra: t('tip.rows', { n: fmtInt(i.n) }) })),
     i => soloMeldung(items[i].name));
 }
@@ -3170,6 +3241,35 @@ const tables = {
     empty: () => t('tbl.emptyRows'),
   }),
 
+  banf: DataTable({
+    id: 'banf', file: 'file.banf', sheet: 'sheet.banf',
+    sort: { key: 'termin', dir: 1 },
+    getRows: () => state.banfFiltered,
+    columns: () => [
+      { key: 'termin', label: () => t('col.banfDate'), cls: 'mono', tip: () => t('col.banfDateTip'), sort: r => r.termin ? r.termin.getTime() : Infinity,
+        html: r => `<span class="${r.termin && r.termin < state.stichtag ? 'late' : ''}">${fmtDate(r.termin)}</span>`,
+        exp: { h: () => t('col.banfDate'), v: r => r.termin, t: 'd', w: 12 } },
+      { key: 'beleg', label: () => t('col.banf'), cls: 'mono', sort: r => r.beleg + '-' + r.pos.padStart(5, '0'),
+        html: r => `${escHtml(r.beleg)}/${escHtml(r.pos)}`,
+        exp: [{ h: () => t('col.banf'), v: r => r.beleg, w: 13 }, { h: () => t('col.pos'), v: r => r.pos, w: 9 }] },
+      colText('material', 'col.material', 'material', 'mono', 12),
+      colText('kurztext', 'col.text', 'kurztext', 'trunc muted', 40),
+      ...(state.stock ? [colCust('kunde')] : []),
+      colText('einkgrp', 'col.grp', 'einkgrp', 'muted', 16),
+      { key: 'lieferdatum', label: () => t('col.delivery'), cls: 'mono muted', sort: r => r.lieferdatum ? r.lieferdatum.getTime() : Infinity,
+        html: r => fmtDate(r.lieferdatum), exp: { h: () => t('col.delivery'), v: r => r.lieferdatum, t: 'd', w: 12 } },
+      { key: 'umterm', label: () => t('col.resched'), cls: 'mono muted', sort: r => r.umterm ? r.umterm.getTime() : Infinity,
+        html: r => fmtDate(r.umterm), exp: { h: () => t('col.resched'), v: r => r.umterm, t: 'd', w: 14 } },
+      { key: 'meldung', label: () => t('col.meld'), cls: 'muted', sort: r => meldShort(r.meldung),
+        html: r => r.meldung === NO_MELDUNG ? '–' : escHtml(meldShort(r.meldung)),
+        exp: { h: () => t('col.meld'), v: r => r.meldung === NO_MELDUNG ? '' : meldLabel(r.meldung), w: 24 } },
+      colQty(),
+      colValue('col.value'),
+    ],
+    footer: rowsFooter,
+    empty: () => t('tbl.emptyBanf'),
+  }),
+
   actions: DataTable({
     id: 'actions', file: 'file.actions', sheet: 'sheet.actions',
     sort: { key: 'diff', dir: 1 },
@@ -3384,29 +3484,59 @@ function upsertChart(id, config) {
   charts[id] = new Chart($(id), config);
 }
 
+/* Klickbare Legende: Serie ein-/ausblenden (Standard: alles sichtbar) */
+function hiddenOf(id) { return state.chartHidden[id] || (state.chartHidden[id] = new Set()); }
+function toggleLegend(item) {
+  const id = item.parentElement.dataset.chart, key = item.dataset.ds;
+  const hidden = hiddenOf(id);
+  if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
+  item.classList.toggle('off', hidden.has(key));
+  const ch = charts[id];
+  if (!ch) return;
+  ch.data.datasets.forEach((d, i) => { if (d.key === key) ch.setDatasetVisibility(i, !hidden.has(key)); });
+  ch.update();
+}
+document.querySelectorAll('.legend[data-chart]').forEach(lg => {
+  lg.addEventListener('click', e => { const it = e.target.closest('[data-ds]'); if (it) toggleLegend(it); });
+  lg.addEventListener('keydown', e => {
+    const it = e.target.closest('[data-ds]');
+    if (it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleLegend(it); }
+  });
+});
+
 /** Monatsreihe rund um den Stichtag:
  *  – Achse beginnt beim ersten Monat mit offenem Wert (Zeilen mit 0 zählen nicht)
  *  – älter als 12 Monate vor Stichtag → ein Balken "Früher"
  *  – später als 12 Monate nach Stichtag → ein Balken "Später" */
-function monthSeries(items, dateFn, isA, valFn) {
+function monthSeries(items, dateFn, isA, valFn, extra) {
   const ref = state.stichtag;
   const refKey  = ref.getFullYear() * 100 + ref.getMonth();
   const horizon = refKey + 100;          // gleicher Monat im Folgejahr
   const start   = refKey - 100;          // gleicher Monat im Vorjahr
   const EARLIER = -1, LATER = 999999;
   const buckets = new Map();
-  let total = 0;
+  let total = 0, totalC = 0;
+  const bucketOf = d => {
+    let k = d.getFullYear() * 100 + d.getMonth();
+    if (k > horizon) k = LATER;
+    else if (k < start) k = EARLIER;
+    if (!buckets.has(k)) buckets.set(k, { a: 0, b: 0, c: 0 });
+    return buckets.get(k);
+  };
   items.forEach(it => {
     const d = dateFn(it);
     const v = valFn(it);
     if (!d || !v) return;
-    let k = d.getFullYear() * 100 + d.getMonth();
-    if (k > horizon) k = LATER;
-    else if (k < start) k = EARLIER;
-    const b = buckets.get(k) || { a: 0, b: 0 };
+    const b = bucketOf(d);
     if (isA(it)) b.a += v; else b.b += v;
     total += v;
-    buckets.set(k, b);
+  });
+  if (extra) extra.items.forEach(it => {
+    const d = extra.dateFn(it);
+    const v = extra.valFn(it);
+    if (!d || !v) return;
+    bucketOf(d).c += v;
+    totalC += v;
   });
   const keys = [...buckets.keys()].filter(k => k !== LATER && k !== EARLIER).sort((x, y) => x - y);
   const months = [];
@@ -3424,24 +3554,33 @@ function monthSeries(items, dateFn, isA, valFn) {
     labels: months.map(k => k === LATER ? t('later') : k === EARLIER ? t('earlier') : M[k % 100] + ' ' + String(Math.floor(k / 100)).slice(2)),
     a: months.map(k => (buckets.get(k) || {}).a || 0),
     b: months.map(k => (buckets.get(k) || {}).b || 0),
-    total,
+    c: extra ? months.map(k => (buckets.get(k) || {}).c || 0) : null,
+    total, totalC,
     laterNote: (buckets.has(EARLIER) ? t('earlierNote', { m: label(start) }) : '') +
                (buckets.has(LATER) ? t('laterNote', { m: label(next(horizon)) }) : ''),
   };
 }
 
-function stackedMonthChart(id, s, labelA, labelB) {
+/** Gestapelter Monatsbalken: a (rot) unten, b (blau), optional c (grün) oben.
+ *  Serien lassen sich über die HTML-Legende (data-chart/data-ds) ausblenden. */
+function stackedMonthChart(id, s, labelA, labelB, labelC) {
   const topRadius = { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 };
+  const hidden = hiddenOf(id);
+  const v   = (k, i) => !hidden.has(k) && s[k] ? s[k][i] : 0;     // sichtbarer Wert einer Serie
+  const gap = below => ctx => below.some(k => v(k, ctx.dataIndex) > 0) ? { bottom: 2, top: 0, left: 0, right: 0 } : 0;
+  const top = above => ctx => above.some(k => v(k, ctx.dataIndex) > 0) ? 0 : topRadius;
+  const ds = (key, label, color, below, above) => ({
+    key, label, data: s[key], backgroundColor: color, stack: 's', maxBarThickness: 24, borderSkipped: false,
+    hidden: hidden.has(key), borderRadius: top(above), borderColor: C.gap, borderWidth: gap(below),
+  });
   upsertChart(id, {
     type: 'bar',
     data: {
       labels: s.labels,
       datasets: [
-        { label: labelA, data: s.a, backgroundColor: C.red, stack: 's', maxBarThickness: 24, borderSkipped: false,
-          borderRadius: ctx => s.b[ctx.dataIndex] > 0 ? 0 : topRadius },
-        { label: labelB, data: s.b, backgroundColor: C.accent, stack: 's', maxBarThickness: 24, borderSkipped: false,
-          borderRadius: topRadius, borderColor: C.gap,
-          borderWidth: ctx => s.a[ctx.dataIndex] > 0 ? { bottom: 2, top: 0, left: 0, right: 0 } : 0 },
+        ds('a', labelA, C.red,    [],         ['b', 'c']),
+        ds('b', labelB, C.accent, ['a'],      ['c']),
+        ...(labelC && s.c ? [ds('c', labelC, C.green, ['a', 'b'], [])] : []),
       ],
     },
     options: baseOptions({
@@ -3497,12 +3636,14 @@ function hBarChart(id, items, onClick) {
 /** Horizontaler gestapelter Balken; cats: [{label,title}], series: [{label,color,data}].
  *  2px Lücke zwischen Segmenten, Rundung nur am Balkenende. */
 function hStackChart(id, cats, series, tipLines, onClick) {
-  const nonZero = i => series.map(s => s.data[i] > 0);
+  const hidden = hiddenOf(id);   // Schlüssel = Index der Serie (data-ds in der Legende)
+  const nonZero = i => series.map((s, si) => !hidden.has(String(si)) && s.data[i] > 0);
   upsertChart(id, {
     type: 'bar',
     data: {
       labels: cats.map(c => c.label),
       datasets: series.map((s, si) => ({
+        key: String(si), hidden: hidden.has(String(si)),
         label: s.label, data: s.data, backgroundColor: s.color, stack: 's', maxBarThickness: 20, borderSkipped: false,
         borderRadius: ctx => si === nonZero(ctx.dataIndex).lastIndexOf(true) ? { topRight: 4, bottomRight: 4, topLeft: 0, bottomLeft: 0 } : 0,
         borderColor: C.gap,
@@ -3520,7 +3661,7 @@ function hStackChart(id, cats, series, tipLines, onClick) {
       plugins: {
         tooltip: {
           mode: 'index', intersect: true,
-          filter: item => item.datasetIndex === 0,
+          filter: (item, i) => i === 0,          // eine Zeile je Balken, auch wenn Serie 0 ausgeblendet ist
           callbacks: {
             title: ctx => cats[ctx[0].dataIndex].title,
             label: ctx => tipLines(ctx.dataIndex),
